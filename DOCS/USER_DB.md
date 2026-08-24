@@ -2,26 +2,26 @@
 
 > This document is built incrementally. Each section is verified and approved before the next is added.
 > All tables use `InnoDB` engine (default in MySQL 8+) for foreign key support and transaction safety.
-> All timestamps are stored in `UTC`. Conversion to IST happens at the application layer.
+> Companion file: [SOCIETY_STRUCTURE_DB.md](./SOCIETY_STRUCTURE_DB.md) — covers `societies`, `blocks`, `floors`, `units`.
 
 ---
 
 ## Status
 
-| Table | Status |
-|---|---|
-| `users` | ✅ Finalized |
-| `societies` | 🔲 Pending |
-| `blocks` | 🔲 Pending |
-| `floors` | 🔲 Pending |
-| `units` | 🔲 Pending |
-| `tickets` | 🔲 Pending |
-| `ticket_replies` | 🔲 Pending |
-| `announcements` | 🔲 Pending |
-| `vendors` | 🔲 Pending |
-| `maintenance_config` | 🔲 Pending |
-| `maintenance_ledger` | 🔲 Pending |
-| `payment_transactions` | 🔲 Pending |
+| Table | Status | Documented In |
+|---|---|---|
+| `users` | ✅ Finalized | [USER_DB.md](./USER_DB.md) |
+| `societies` | ✅ Finalized | [SOCIETY_STRUCTURE_DB.md](./SOCIETY_STRUCTURE_DB.md) |
+| `blocks` | ✅ Finalized | [SOCIETY_STRUCTURE_DB.md](./SOCIETY_STRUCTURE_DB.md) |
+| `floors` | ✅ Finalized | [SOCIETY_STRUCTURE_DB.md](./SOCIETY_STRUCTURE_DB.md) |
+| `units` | ✅ Finalized | [SOCIETY_STRUCTURE_DB.md](./SOCIETY_STRUCTURE_DB.md) |
+| `tickets` | 🔲 Pending | Phase 2 |
+| `ticket_replies` | 🔲 Pending | Phase 2 |
+| `announcements` | 🔲 Pending | Phase 2 |
+| `vendors` | 🔲 Pending | Phase 2 |
+| `maintenance_config` | 🔲 Pending | Phase 2 |
+| `maintenance_ledger` | 🔲 Pending | Phase 2 |
+| `payment_transactions` | 🔲 Pending | Phase 2 |
 
 ---
 
