@@ -5,6 +5,7 @@ import cors from 'cors';
 import authRoutes from './modules/auth/auth.routes.js';
 import societyRoutes from './modules/society/society.routes.js';
 import structureRoutes from './modules/structure/structure.routes.js';
+import publicRoutes from './modules/public/public.routes.js';
 
 // Middleware imports
 import { errorHandler } from './middlewares/error.middleware.js';
@@ -29,6 +30,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/society', societyRoutes);
 app.use('/api/v1', structureRoutes);
+app.use('/api/v1/public', publicRoutes);
 
 // 404 handler
 app.use((req, res) => {
