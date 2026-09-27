@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.config import settings
 from app.database.mongodb import init_db, close_db, get_async_client
+from app.routers.chat import router as chat_router
 
 # Setup structured logging
 logging.basicConfig(
@@ -51,6 +52,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount Routers
+app.include_router(chat_router)
 
 
 @app.get("/", tags=["General"])
