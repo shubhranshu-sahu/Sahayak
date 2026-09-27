@@ -1,0 +1,16 @@
+import { Router } from 'express';
+import * as societyController from './society.controller.js';
+import { authenticateJWT } from '../../middlewares/auth.middleware.js';
+import { authorizeRoles } from '../../middlewares/role.middleware.js';
+
+const router = Router();
+
+// All society routes are private and secretary only for now
+router.use(authenticateJWT);
+router.use(authorizeRoles('secretary'));
+
+router.post('/setup', societyController.setupSociety);
+router.post('/blocks', societyController.addBlock);
+router.get('/structure', societyController.getStructure);
+
+export default router;
