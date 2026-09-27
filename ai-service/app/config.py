@@ -15,7 +15,7 @@ class Settings(BaseSettings):
         description="Google Gemini API key required for LLM calls",
     )
     GEMINI_MODEL: str = Field(
-        default="gemini-3.5-flash",
+        default="gemini-3.8-flash",
         description="Gemini model name to use",
     )
 
@@ -57,6 +57,16 @@ class Settings(BaseSettings):
     HOST: str = Field(default="0.0.0.0", description="Service host binding")
     PORT: int = Field(default=8001, description="Service port")
     ENVIRONMENT: str = Field(default="development", description="Runtime environment")
+
+    # JWT Authentication (Shared secret with Node.js backend)
+    JWT_SECRET: str = Field(
+        default="sahayak_super_secret_jwt_key_shared_2026",
+        description="Shared secret key for verifying backend issued JWTs",
+    )
+    JWT_ALGORITHM: str = Field(
+        default="HS256",
+        description="JWT cryptographic signing algorithm",
+    )
 
     # Pydantic Settings configuration: auto-load .env from ai-service root
     model_config = SettingsConfigDict(
