@@ -29,10 +29,10 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/society', societyRoutes);
-app.use('/api/v1', structureRoutes);
 app.use('/api/v1/public', publicRoutes);
+app.use('/api/v1/society', societyRoutes);
 app.use('/api/v1/secretary', secretaryRoutes);
+app.use('/api/v1', structureRoutes);
 
 // 404 handler
 app.use((req, res) => {
