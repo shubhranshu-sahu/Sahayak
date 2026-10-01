@@ -87,7 +87,7 @@ CREATE TABLE societies (
 ---
 
 #### `society_code` — `VARCHAR(20) NOT NULL` + `UNIQUE` + `CHECK`
-- A short, human-readable code that the secretary creates, e.g. `"SUNRISE-22"`, `"GVR-PHASE2"`.
+- A short, human-readable code that the secretary creates, e.g. `"SUNRISE-DEL"`, `"GVR-PHASE-TWO"`.
 - **Primary use:** residents enter this code at registration to find and join the correct society.
   Without it, a resident has no way to link themselves to a society.
 - `UNIQUE` — globally unique across the entire platform. Two societies cannot share a code.
@@ -190,7 +190,7 @@ CREATE TABLE societies (
   This is the only safe behavior.
 
 **Why is `society_code` secretary-defined and not auto-generated?**
-Secretaries need to share this code with residents verbally or on a notice board — `"SUNRISE-22"` is
+Secretaries need to share this code with residents verbally or on a notice board — `"SUNRISE-DEL"` is
 memorable and communicable; `"a3f9b2c1"` is not. Human-readable codes are a deliberate UX choice.
 The `UNIQUE` constraint at the DB level ensures no collisions.
 

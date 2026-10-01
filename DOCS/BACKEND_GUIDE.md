@@ -223,7 +223,7 @@ Base URL prefix: `/api/v1`
       "society": {
         "id": 12,
         "name": "Sunrise Apartments",
-        "societyCode": "SUNRISE-22"
+        "societyCode": "SUNRISE-DEL"
       },
       "unit": {
         "id": 45,
@@ -246,7 +246,7 @@ Base URL prefix: `/api/v1`
   ```json
   {
     "name": "Sunrise Apartments",
-    "society_code": "SUNRISE-22",
+    "society_code": "SUNRISE-DEL",
     "address": "Plot 14, Sector 21, Dwarka",
     "city": "New Delhi",
     "state": "Delhi",
@@ -270,7 +270,7 @@ Base URL prefix: `/api/v1`
     "data": {
       "societyId": 12,
       "name": "Sunrise Apartments",
-      "societyCode": "SUNRISE-22"
+      "societyCode": "SUNRISE-DEL"
     }
   }
   ```
@@ -424,7 +424,7 @@ Base URL prefix: `/api/v1`
       {
         "id": 12,
         "name": "Sunrise Apartments",
-        "societyCode": "SUNRISE-22",
+        "societyCode": "SUNRISE-DEL",
         "city": "New Delhi"
       }
     ]

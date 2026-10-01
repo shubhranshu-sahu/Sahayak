@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Society Setup Wizard — Sahayak</title>
+    <meta name="description" content="Set up your society structure, blocks, floors, and residential units in Sahayak.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/cursor.css">
+</head>
+
+<body>
+    <!-- Full-page initial loader -->
+    <div id="app-page-loader" class="page-loader">
+        <div class="loader-spinner"></div>
+        <div class="loader-text" id="app-page-loader-text">Loading society setup wizard...</div>
+    </div>
+
+    <!-- App Layout -->
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside id="app-sidebar"></aside>
+
+        <!-- Main Workspace -->
+        <main class="main-workspace">
+            <!-- Topbar -->
+            <header id="app-topbar"></header>
+
+            <!-- Wizard Body -->
+            <div class="content-body">
+                <div class="wizard-container">
+                    <!-- Progress Stepper -->
+                    <div class="stepper">
+                        <div class="step-item active" id="step-node-1">
+                            <div class="step-circle">1</div>
+                            <span class="step-label">Society Profile</span>
+                        </div>
+                        <div class="step-item" id="step-node-2">
+                            <div class="step-circle">2</div>
+                            <span class="step-label">Blocks</span>
+                        </div>
+                        <div class="step-item" id="step-node-3">
+                            <div class="step-circle">3</div>
+                            <span class="step-label">Floors & Units</span>
+                        </div>
+                        <div class="step-item" id="step-node-4">
+                            <div class="step-circle">4</div>
+                            <span class="step-label">Preview & Launch</span>
+                        </div>
+                    </div>
+
+                    <!-- Wizard Card -->
+                    <div class="wizard-card">
+                        <!-- Step 1: Society Profile Form -->
+                        <div class="wizard-step-panel active" id="panel-step-1">
+                            <div class="step-intro">
+                                <h3>Step 1: Society Profile</h3>
+                                <p>Register your society details so residents can discover and select their units.</p>
+                            </div>
+
+                            <!-- Registered banner if society already exists -->
+                            <div id="society-registered-banner" class="society-exists-banner" style="display: none;">
+                                <div class="society-exists-content">
+                                    <div class="society-exists-icon">
+                                        <i data-lucide="check-circle-2"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 700; color: #1B5E20; font-size: var(--fs-sm);" id="exists-banner-title">Society Already Registered</div>
+                                        <div style="font-size: var(--fs-xs); color: #2E7D32;" id="exists-banner-desc">Your society details are saved. You can proceed directly to blocks and structure.</div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-quick-action" style="padding: 6px 14px; font-size: 12px; background: #2E7D32;" onclick="goToStep(2)">
+                                    <span>Next: Blocks &rarr;</span>
+                                </button>
+                            </div>
+
+                            <form id="form-create-society" novalidate>
+                                <div class="wizard-form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label" for="soc-name">Society Name</label>
+                                        <input type="text" class="form-input" id="soc-name" placeholder="e.g. Sunrise Apartments" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="soc-code">Society Code (e.g. SUNRISE-DEL, A-Z and hyphens only)</label>
+                                        <input type="text" class="form-input" id="soc-code" placeholder="e.g. SUNRISE-DEL" style="text-transform: uppercase;" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: var(--sp-5);">
+                                    <label class="form-label" for="soc-address">Full Address</label>
+                                    <input type="text" class="form-input" id="soc-address" placeholder="e.g. Plot 14, Sector 21, Dwarka" required>
+                                </div>
+
+                                <div class="wizard-form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label" for="soc-city">City</label>
+                                        <input type="text" class="form-input" id="soc-city" placeholder="e.g. New Delhi" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="soc-state">State</label>
+                                        <input type="text" class="form-input" id="soc-state" placeholder="e.g. Delhi" required>
+                                    </div>
+                                </div>
+
+                                <div class="wizard-form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label" for="soc-pincode">Pincode</label>
+                                        <input type="text" class="form-input" id="soc-pincode" placeholder="e.g. 110075" required maxlength="6">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="soc-reg-no">Registration / RWA Number (Optional)</label>
+                                        <input type="text" class="form-input" id="soc-reg-no" placeholder="e.g. RWA-DEL-2022">
+                                    </div>
+                                </div>
+
+                                <div class="wizard-footer">
+                                    <span style="font-size: var(--fs-xs); color: var(--clr-text-secondary);">All fields except RWA number are required</span>
+                                    <button type="submit" class="btn-quick-action" id="btn-submit-step1">
+                                        <span class="btn-text">Save & Proceed to Blocks</span>
+                                        <div class="btn-loader"></div>
+                                        <i data-lucide="arrow-right"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Step 2: Add Blocks -->
+                        <div class="wizard-step-panel" id="panel-step-2">
+                            <div class="step-intro">
+                                <h3>Step 2: Add Society Blocks / Towers</h3>
+                                <p>Define the physical buildings in your society (e.g., Block A, Block B, Block C).</p>
+                            </div>
+
+                            <form id="form-add-block" style="display: flex; gap: var(--sp-3); margin-bottom: var(--sp-6);">
+                                <input type="text" class="form-input" id="block-name-input" placeholder="Enter Block letter (e.g. A, B, C)" maxlength="2" style="max-width: 320px; text-transform: uppercase;" required>
+                                <button type="submit" class="btn-quick-action" id="btn-add-block">
+                                    <span class="btn-text">+ Add Block</span>
+                                    <div class="btn-loader"></div>
+                                </button>
+                            </form>
+
+                            <div style="margin-bottom: var(--sp-6);">
+                                <h4 style="font-size: var(--fs-sm); font-weight: 600; margin-bottom: var(--sp-3); color: var(--clr-text-primary);">Created Blocks:</h4>
+                                <div id="created-blocks-list" style="display: flex; flex-wrap: wrap; gap: var(--sp-2);">
+                                    <span style="font-size: var(--fs-xs); color: var(--clr-text-secondary);">No blocks added yet. Use the form above to add your first block.</span>
+                                </div>
+                            </div>
+
+                            <div class="wizard-footer">
+                                <button type="button" class="btn-banner-secondary" style="color: var(--clr-text-primary); border-color: var(--clr-border);" onclick="goToStep(1)">
+                                    <i data-lucide="arrow-left"></i>
+                                    <span>Back</span>
+                                </button>
+                                <button type="button" class="btn-quick-action" id="btn-to-step3" onclick="goToStep(3)">
+                                    <span>Proceed to Floors & Units</span>
+                                    <i data-lucide="arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Bulk Floors & Units Generation -->
+                        <div class="wizard-step-panel" id="panel-step-3">
+                            <div class="step-intro">
+                                <h3>Step 3: Generate Floors & Units</h3>
+                                <p>Bulk generate floors and standard unit numbering for each block.</p>
+                            </div>
+
+                            <form id="form-generate-units" novalidate>
+                                <div class="wizard-form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label" for="select-block">Select Block</label>
+                                        <select class="form-input" id="select-block" required>
+                                            <option value="" disabled selected>Select a block</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" id="total-floors-group">
+                                        <label class="form-label" for="total-floors">Total Floors to Generate</label>
+                                        <input type="number" class="form-input" id="total-floors" min="1" max="50" placeholder="e.g. 5" value="5" required>
+                                    </div>
+                                </div>
+
+                                <!-- Dynamic Block Status Card -->
+                                <div id="block-status-card" style="display: none; padding: 12px 16px; border-radius: var(--radius-md); background: rgba(92, 26, 51, 0.05); border: 1px solid rgba(92, 26, 51, 0.2); margin-bottom: var(--sp-4); font-size: var(--fs-xs);">
+                                    <div style="font-weight: 700; color: var(--clr-primary); display: flex; align-items: center; gap: 6px;">
+                                        <i data-lucide="info" style="width: 15px; height: 15px;"></i>
+                                        <span id="block-status-title">Block Status</span>
+                                    </div>
+                                    <div id="block-status-desc" style="color: var(--clr-text-secondary); margin-top: 4px; line-height: 1.5;"></div>
+
+                                    <!-- Mode selector if floors exist -->
+                                    <div id="existing-floors-mode" style="display: none; margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(92, 26, 51, 0.2);">
+                                        <span style="font-weight: 600; color: var(--clr-text-primary); display: block; margin-bottom: 6px;">What would you like to do?</span>
+                                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 6px; font-weight: 500;">
+                                            <input type="radio" name="floor-action-mode" value="units-only" id="mode-units-only" checked>
+                                            <span>Generate units for existing floors only (Keep current floors, do not add more)</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;">
+                                            <input type="radio" name="floor-action-mode" value="add-floors" id="mode-add-floors">
+                                            <span>Append more floors to this block (Creates new floors starting after current max floor)</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Live Floor Calculation Preview -->
+                                <div id="floor-calc-preview" style="display: none; padding: 10px 14px; border-radius: var(--radius-md); background: #E8F5E9; border: 1px solid #81C784; color: #1B5E20; font-size: var(--fs-xs); margin-bottom: var(--sp-4); font-weight: 500;">
+                                    <i data-lucide="check" style="width: 14px; height: 14px; vertical-align: middle; display: inline-block;"></i>
+                                    <span id="floor-calc-text"></span>
+                                </div>
+
+                                <div class="wizard-form-grid">
+                                    <div class="form-group">
+                                        <label class="form-label">Units Per Floor Range</label>
+                                        <div style="display: flex; gap: var(--sp-2); align-items: center;">
+                                            <input type="number" class="form-input" id="unit-start" min="1" max="99" value="1" placeholder="Start (1)">
+                                            <span>to</span>
+                                            <input type="number" class="form-input" id="unit-end" min="1" max="99" value="4" placeholder="End (4)">
+                                        </div>
+                                        <span style="font-size: 11px; color: var(--clr-text-secondary); margin-top: 4px; display: block;">
+                                            Generates units like: Floor 1 -> 101, 102, 103, 104; Floor 2 -> 201...
+                                        </span>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label" for="unit-type">Unit Type & Approx Area</label>
+                                        <div style="display: flex; gap: var(--sp-2);">
+                                            <select class="form-input" id="unit-type" style="flex: 1;">
+                                                <option value="apartment" selected>Apartment</option>
+                                                <option value="villa">Villa</option>
+                                                <option value="row_house">Row House</option>
+                                                <option value="plot">Plot</option>
+                                            </select>
+                                            <input type="number" class="form-input" id="unit-area" placeholder="Sqft (1200)" value="1200" style="width: 120px;">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin: var(--sp-5) 0;">
+                                    <button type="submit" class="btn-quick-action" id="btn-generate-units" style="background: var(--clr-primary);">
+                                        <span class="btn-text">⚡ Auto-Generate Floors & Units</span>
+                                        <div class="btn-loader"></div>
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div class="wizard-footer">
+                                <button type="button" class="btn-banner-secondary" style="color: var(--clr-text-primary); border-color: var(--clr-border);" onclick="goToStep(2)">
+                                    <i data-lucide="arrow-left"></i>
+                                    <span>Back</span>
+                                </button>
+                                <button type="button" class="btn-quick-action" onclick="goToStep(4)">
+                                    <span>Preview Structure Tree</span>
+                                    <i data-lucide="arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Visual Structure Tree Preview -->
+                        <div class="wizard-step-panel" id="panel-step-4">
+                            <div class="step-intro">
+                                <h3>Step 4: Society Structure Hierarchy</h3>
+                                <p>Review your interactive structure tree. Green badges indicate vacant units ready for resident registration.</p>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4);">
+                                <div style="display: flex; gap: var(--sp-4); font-size: var(--fs-xs);">
+                                    <span style="display: flex; align-items: center; gap: 4px;">
+                                        <span style="width: 10px; height: 10px; border-radius: 2px; background: #E8F5E9; border: 1px solid #2E7D32;"></span>
+                                        Vacant Unit
+                                    </span>
+                                    <span style="display: flex; align-items: center; gap: 4px;">
+                                        <span style="width: 10px; height: 10px; border-radius: 2px; background: #F3E5F5; border: 1px solid #7B1FA2;"></span>
+                                        Occupied Unit
+                                    </span>
+                                </div>
+                                <button type="button" class="btn-banner-secondary" style="color: var(--clr-primary); font-size: var(--fs-xs); border: 1px solid var(--clr-border);" onclick="refreshStructureTree()">
+                                    <i data-lucide="refresh-cw" style="width: 12px;"></i>
+                                    <span>Refresh Tree</span>
+                                </button>
+                            </div>
+
+                            <div id="full-structure-tree" class="structure-tree-view">
+                                <div class="empty-state">
+                                    <div class="loader-spinner" style="margin: 0 auto var(--sp-3);"></div>
+                                    <h4>Loading structure...</h4>
+                                </div>
+                            </div>
+
+                            <div class="wizard-footer" style="margin-top: var(--sp-6);">
+                                <button type="button" class="btn-banner-secondary" style="color: var(--clr-text-primary); border-color: var(--clr-border);" onclick="goToStep(3)">
+                                    <i data-lucide="arrow-left"></i>
+                                    <span>Back to Units</span>
+                                </button>
+                                <a href="dashboard.html" class="btn-quick-action" style="background: var(--clr-success); text-decoration: none;">
+                                    <i data-lucide="check-circle"></i>
+                                    <span>Complete Setup & Go to Dashboard</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="../config.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/router.js"></script>
+    <script src="../js/components.js"></script>
+    <script src="../js/cursor.js"></script>
+
+    <script src="../js/pages/society-setup.js"></script>
+</body>
+
+</html>
