@@ -710,3 +710,14 @@ so context is never lost between sessions.
 - LangGraph state does not store file references — it processes files via tools
 - UI displays file cards by reading `attachments[]` from `chat_messages`
 - Processed status and summary updated in-place when agent finishes processing
+
+---
+
+**Decision: Stateless JWT Authentication via Shared Secret with Node.js Backend**
+- The AI service verifies JWTs issued by the Node.js backend using a shared `JWT_SECRET` (HMAC-SHA256).
+- Zero inter-service HTTP calls or MySQL lookups needed for authentication (verified in < 0.1ms).
+- Endpoints (`POST /chat/message`, `GET /chat/history`) require `Authorization: Bearer <jwt>`.
+- Token payload (`userId`, `role`, `societyId`, `status`) is enforced:
+  - `role` must be `'secretary'` or `'super_admin'` — residents are rejected with `403 Forbidden`.
+  - `status` must be `'active'` — inactive accounts are rejected with `403 Forbidden`.
+  - `thread_id` is automatically bound to `secretary_{userId}` — prevents user spoofing.
