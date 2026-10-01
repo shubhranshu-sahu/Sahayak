@@ -5,13 +5,20 @@ import { authorizeRoles } from '../../middlewares/role.middleware.js';
 
 const router = Router();
 
-// Structure routes are private and secretary only for setup phase
-router.use(authenticateJWT);
-router.use(authorizeRoles('secretary'));
+// Apply auth directly to each endpoint rather than blanket router.use()
+// This prevents authenticateJWT from running on unrelated /api/v1/* routes
+router.post(
+  '/blocks/:blockId/floors/bulk',
+  authenticateJWT,
+  authorizeRoles('secretary'),
+  structureController.bulkAddFloors
+);
 
-// Routes will be mounted at /api/v1
-// e.g. /blocks/:blockId/floors/bulk
-router.post('/blocks/:blockId/floors/bulk', structureController.bulkAddFloors);
-router.post('/floors/:floorId/units/bulk', structureController.bulkAddUnits);
+router.post(
+  '/floors/:floorId/units/bulk',
+  authenticateJWT,
+  authorizeRoles('secretary'),
+  structureController.bulkAddUnits
+);
 
 export default router;
