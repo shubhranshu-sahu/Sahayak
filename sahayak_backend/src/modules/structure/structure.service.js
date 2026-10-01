@@ -24,7 +24,8 @@ export const bulkAddFloors = async (societyId, blockId, total_floors) => {
       'SELECT IFNULL(MAX(floor_number), 0) AS max_floor FROM floors WHERE block_id = ?',
       [blockId]
     );
-    const startFloor = maxFloorRes[0].max_floor + 1;
+    const currentMax = Number(maxFloorRes[0]?.max_floor) || 0;
+    const startFloor = currentMax + 1;
 
     for (let i = 0; i < total_floors; i++) {
       const floorNum = startFloor + i;
@@ -49,7 +50,9 @@ export const bulkAddFloors = async (societyId, blockId, total_floors) => {
 };
 
 export const bulkAddUnits = async (societyId, floorId, payload) => {
-  const { start_unit, end_unit, unit_type, area_sqft } = payload;
+  const start_unit = Number(payload.start_unit);
+  const end_unit = Number(payload.end_unit);
+  const { unit_type, area_sqft } = payload;
 
   if (start_unit < 1 || end_unit > 99 || start_unit > end_unit) {
     throw { status: 400, message: 'Invalid start_unit or end_unit (must be between 1 and 99)' };

@@ -303,7 +303,7 @@ Check if the backend server is awake and running.
   ```json
   {
     "name": "Sunrise Apartments",
-    "society_code": "SUNRISE-22",
+    "society_code": "SUNRISE-DEL",
     "address": "Plot 14, Sector 21, Dwarka",
     "city": "New Delhi",
     "state": "Delhi",
@@ -323,7 +323,7 @@ Check if the backend server is awake and running.
     "data": {
       "societyId": 1,
       "name": "Sunrise Apartments",
-      "societyCode": "SUNRISE-22"
+      "societyCode": "SUNRISE-DEL"
     }
   }
   ```

@@ -609,8 +609,8 @@
 
             <div class="team-grid">
                 <div class="team-card">
-                    <div class="team-avatar">V</div>
-                    <h5>Vansh</h5>
+                    <div class="team-avatar">S</div>
+                    <h5>Shubhranshu</h5>
                     <span class="team-role">AI & Frontend</span>
                 </div>
 
@@ -623,13 +623,7 @@
                 <div class="team-card">
                     <div class="team-avatar">S</div>
                     <h5>Samia</h5>
-                    <span class="team-role">Core Member</span>
-                </div>
-
-                <div class="team-card">
-                    <div class="team-avatar">U</div>
-                    <h5>Uday</h5>
-                    <span class="team-role">Core Member</span>
+                    <span class="team-role">Frontend</span>
                 </div>
             </div>
         </div>
@@ -697,37 +691,7 @@
     <script src="js/cursor.js"></script>
     <script src="js/animations.js"></script>
 
-    <!-- Initialize Lucide Icons -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
-
-            // Mobile hamburger toggle
-            const hamburger = document.getElementById('nav-hamburger');
-            const navLinks = document.getElementById('nav-links');
-
-            if (hamburger && navLinks) {
-                hamburger.addEventListener('click', () => {
-                    hamburger.classList.toggle('active');
-                    navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
-
-                    // Mobile: stack nav links vertically
-                    if (window.innerWidth <= 768) {
-                        navLinks.style.flexDirection = 'column';
-                        navLinks.style.position = 'absolute';
-                        navLinks.style.top = '100%';
-                        navLinks.style.left = '0';
-                        navLinks.style.right = '0';
-                        navLinks.style.background = 'rgba(61, 15, 33, 0.95)';
-                        navLinks.style.backdropFilter = 'blur(20px)';
-                        navLinks.style.padding = '1.5rem';
-                        navLinks.style.gap = '1rem';
-                        navLinks.style.borderBottom = '1px solid rgba(242, 212, 184, 0.1)';
-                    }
-                });
-            }
-        });
-    </script>
+    <script src="js/pages/landing.js"></script>
 </body>
 
 </html>
