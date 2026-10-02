@@ -25,38 +25,56 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 3. Check if user already has a society
     if (user.societyId || (user.society && user.society.id)) {
-        societyData = user.society || { id: user.societyId, name: user.societyName };
-        
-        // Show registered banner
-        const banner = document.getElementById('society-registered-banner');
-        if (banner) {
-            banner.style.display = 'flex';
-            const titleEl = document.getElementById('exists-banner-title');
-            const descEl = document.getElementById('exists-banner-desc');
-            if (titleEl) titleEl.textContent = `Society '${societyData.name || 'My Society'}' is Active`;
-            if (descEl) descEl.textContent = `Registered with unique code ${societyData.societyCode || 'SAVED'}. Proceed to blocks or inspect structure.`;
+        // Fetch full society configuration
+        const res = await Api.get('/society/setup');
+        if (res.success && res.data) {
+            societyData = res.data;
+            
+            // Show registered banner
+            const banner = document.getElementById('society-registered-banner');
+            if (banner) {
+                banner.style.display = 'flex';
+                const titleEl = document.getElementById('exists-banner-title');
+                const descEl = document.getElementById('exists-banner-desc');
+                if (titleEl) titleEl.textContent = `Society '${societyData.name || 'My Society'}' is Active`;
+                if (descEl) descEl.textContent = `Registered with unique code ${societyData.society_code || societyData.societyCode || 'SAVED'}. You can update details below or proceed.`;
+            }
+
+            // Populate Step 1 with existing info
+            const nameInput = document.getElementById('soc-name');
+            if (nameInput) nameInput.value = societyData.name || '';
+
+            const codeInput = document.getElementById('soc-code');
+            if (codeInput) {
+                codeInput.value = societyData.society_code || societyData.societyCode || '';
+                codeInput.disabled = true;
+                codeInput.title = 'Society code is unique and cannot be modified once registered.';
+            }
+
+            const addressInput = document.getElementById('soc-address');
+            if (addressInput) addressInput.value = societyData.address || '';
+            const cityInput = document.getElementById('soc-city');
+            if (cityInput) cityInput.value = societyData.city || '';
+            const stateInput = document.getElementById('soc-state');
+            if (stateInput) stateInput.value = societyData.state || '';
+            const pincodeInput = document.getElementById('soc-pincode');
+            if (pincodeInput) pincodeInput.value = societyData.pincode || '';
+            
+            const regNoInput = document.getElementById('soc-reg-no');
+            if (regNoInput && societyData.metadata && societyData.metadata.registration_number) {
+                regNoInput.value = societyData.metadata.registration_number;
+            }
+
+            // Update Step 1 button text
+            const btnStep1 = document.getElementById('btn-submit-step1');
+            if (btnStep1) {
+                const txt = btnStep1.querySelector('.btn-text');
+                if (txt) txt.textContent = 'Update & Proceed to Blocks';
+            }
+
+            // Auto-load blocks and structure
+            await loadExistingStructure();
         }
-
-        // Populate Step 1 with existing info
-        const nameInput = document.getElementById('soc-name');
-        if (nameInput) nameInput.value = societyData.name || '';
-
-        const codeInput = document.getElementById('soc-code');
-        if (codeInput) {
-            codeInput.value = societyData.societyCode || '';
-            codeInput.disabled = true;
-            codeInput.title = 'Society code is unique and cannot be modified once registered.';
-        }
-
-        // Update Step 1 button text
-        const btnStep1 = document.getElementById('btn-submit-step1');
-        if (btnStep1) {
-            const txt = btnStep1.querySelector('.btn-text');
-            if (txt) txt.textContent = 'Proceed to Blocks (Skip)';
-        }
-
-        // Auto-load blocks and structure
-        await loadExistingStructure();
     }
 
     Components.hidePageLoader();
@@ -68,13 +86,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         formStep1.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            // If secretary already has a society, skip re-creating (avoids 409 Conflict)
-            if (societyData && (societyData.id || societyData.societyId)) {
-                Toast.success('Society profile confirmed. Proceeding to Blocks.');
-                goToStep(2);
-                return;
-            }
-
             const name = document.getElementById('soc-name').value.trim();
             const society_code = document.getElementById('soc-code').value.trim().toUpperCase();
             const address = document.getElementById('soc-address').value.trim();
@@ -83,43 +94,55 @@ document.addEventListener('DOMContentLoaded', async () => {
             const pincode = document.getElementById('soc-pincode').value.trim();
             const regNo = document.getElementById('soc-reg-no').value.trim();
 
-            if (!name || !society_code || !address || !city || !state || !pincode) {
+            if (!name || (!societyData && !society_code) || !address || !city || !state || !pincode) {
                 Toast.error('Please fill in all required fields.');
                 return;
             }
 
-            // Format validation: Uppercase A-Z and hyphens only (3-20 chars)
-            const codeRegex = /^[A-Z][A-Z-]{2,19}$/;
-            if (!codeRegex.test(society_code)) {
-                Toast.error('Society code must be 3-20 characters: uppercase letters A-Z and hyphens (-) only, starting with a letter.');
-                return;
+            if (!societyData) {
+                // Format validation: Uppercase A-Z and hyphens only (3-20 chars)
+                const codeRegex = /^[A-Z][A-Z-]{2,19}$/;
+                if (!codeRegex.test(society_code)) {
+                    Toast.error('Society code must be 3-20 characters: uppercase letters A-Z and hyphens (-) only, starting with a letter.');
+                    return;
+                }
             }
 
             const submitBtn = document.getElementById('btn-submit-step1');
             submitBtn.classList.add('loading');
             submitBtn.disabled = true;
 
-            const res = await Api.post('/society/setup', {
+            const payload = {
                 name,
-                society_code,
                 address,
                 city,
                 state,
                 pincode,
                 metadata: { registration_number: regNo }
-            });
+            };
+            
+            if (!societyData) {
+                payload.society_code = society_code;
+            }
+
+            let res;
+            if (societyData && (societyData.id || societyData.societyId)) {
+                res = await Api.put('/society/setup', payload);
+            } else {
+                res = await Api.post('/society/setup', payload);
+            }
 
             submitBtn.classList.remove('loading');
             submitBtn.disabled = false;
 
             if (res.success && res.data) {
                 societyData = res.data;
-                Toast.success('Society profile created successfully!');
+                Toast.success(societyData ? 'Society profile updated successfully!' : 'Society profile created successfully!');
                 await Router.validateAndGetUser();
                 Components.initSidebar('society-setup');
                 goToStep(2);
             } else {
-                Toast.error(res.message || 'Failed to create society.');
+                Toast.error(res.message || 'Failed to save society profile.');
             }
         });
     }

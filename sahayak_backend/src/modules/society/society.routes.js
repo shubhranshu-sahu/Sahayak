@@ -9,7 +9,9 @@ const router = Router();
 router.use(authenticateJWT);
 router.use(authorizeRoles('secretary'));
 
+router.get('/setup', societyController.getSocietyConfig);
 router.post('/setup', societyController.setupSociety);
+router.put('/setup', societyController.updateSocietyConfig);
 router.post('/blocks', societyController.addBlock);
 router.get('/structure', societyController.getStructure);
 

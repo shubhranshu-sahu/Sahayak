@@ -40,3 +40,33 @@ export const getStructure = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getSocietyConfig = async (req, res, next) => {
+  try {
+    if (!req.user.societyId) {
+      return sendError(res, 404, 'No society found for this secretary');
+    }
+    const data = await societyService.getSocietyConfig(req.user.societyId);
+    return sendSuccess(res, 200, 'Society configuration retrieved', data);
+  } catch (error) {
+    if (error.status) {
+      return sendError(res, error.status, error.message);
+    }
+    next(error);
+  }
+};
+
+export const updateSocietyConfig = async (req, res, next) => {
+  try {
+    if (!req.user.societyId) {
+      return sendError(res, 404, 'No society found to update');
+    }
+    const data = await societyService.updateSocietyConfig(req.user.societyId, req.body);
+    return sendSuccess(res, 200, 'Society configuration updated', data);
+  } catch (error) {
+    if (error.status) {
+      return sendError(res, error.status, error.message);
+    }
+    next(error);
+  }
+};

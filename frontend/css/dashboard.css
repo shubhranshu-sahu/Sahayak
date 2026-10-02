@@ -1153,11 +1153,11 @@
     align-items: center;
     gap: var(--sp-2);
     font-family: var(--ff-heading);
-    font-size: 0.8125rem; /* 13px */
-    font-weight: 700;
-    color: #4A1226; /* Deep distinct burgundy for headings */
+    font-size: 0.75rem; /* 12px */
+    font-weight: 800;
+    color: var(--clr-primary);
     margin-bottom: var(--sp-2);
-    letter-spacing: 0.03em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
 }
 
@@ -1168,7 +1168,7 @@ select.form-input {
     height: 46px;
     padding: 0 var(--sp-4);
     background: #FFFFFF;
-    border: 1.5px solid #C8B2BC; /* Prominent, visible boundary */
+    border: 2px solid #947986; /* Prominent, visible boundary */
     border-radius: var(--radius-md);
     font-family: var(--ff-body);
     font-size: 0.9375rem; /* 15px */
@@ -1176,7 +1176,7 @@ select.form-input {
     color: #1A0A10; /* High contrast typed text */
     outline: none;
     transition: all var(--dur-fast) var(--ease-out);
-    box-shadow: 0 1px 3px rgba(92, 26, 51, 0.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .form-input:focus,
