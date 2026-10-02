@@ -22,6 +22,8 @@ def get_llm(temperature: float = 0.7) -> ChatGoogleGenerativeAI:
             model=settings.GEMINI_MODEL,
             google_api_key=settings.GEMINI_API_KEY,
             temperature=temperature,
+            max_retries=2,
+            timeout=30.0,
         )
     return _models[temperature]
 

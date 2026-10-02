@@ -15,7 +15,7 @@ class Settings(BaseSettings):
         description="Google Gemini API key required for LLM calls",
     )
     GEMINI_MODEL: str = Field(
-        default="gemini-3.8-flash",
+        default="gemini-1.5-flash",
         description="Gemini model name to use",
     )
 
