@@ -17,32 +17,34 @@ const Components = (() => {
         const userName = user.name || 'User';
         const userInitial = userName.charAt(0).toUpperCase();
         const role = user.role || 'secretary';
+        const isResident = role === 'resident';
 
         // Society info
         const societyName = (user.society && user.society.name) || (user.societyName) || (user.societyId ? 'My Society' : 'Setup Required');
         const societyCode = (user.society && user.society.societyCode) || (user.societyCode) || (user.societyId ? `ID: ${user.societyId}` : 'No Society');
-        const needsSetup = !user.societyId && (!user.society || !user.society.id);
+        const unitLabel = (user.unit && user.unit.displayLabel) ? user.unit.displayLabel : null;
+        const needsSetup = !isResident && !user.societyId && (!user.society || !user.society.id);
 
         container.className = 'sidebar';
         container.innerHTML = `
             <!-- Sidebar Header -->
             <div class="sidebar-header">
-                <a href="${activePage === 'dashboard' ? '#' : 'dashboard.html'}" class="sidebar-brand">
+                <a href="${isResident ? 'resident-dashboard.html' : (activePage === 'dashboard' ? '#' : 'dashboard.html')}" class="sidebar-brand">
                     <img src="../assets/images/logo.png" alt="Sahayak" class="sidebar-logo" onerror="this.src='https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=80&q=80'">
                     <div class="sidebar-brand-text">
                         <h1>Sahayak</h1>
-                        <span>Management</span>
+                        <span>${isResident ? 'Resident Portal' : 'Management'}</span>
                     </div>
                 </a>
 
                 <!-- Society Context Badge -->
                 <div class="sidebar-society-badge">
                     <div class="society-badge-icon">
-                        <i data-lucide="building-2"></i>
+                        <i data-lucide="${isResident ? 'home' : 'building-2'}"></i>
                     </div>
                     <div class="society-badge-info">
                         <div class="society-badge-name">${societyName}</div>
-                        <div class="society-badge-code">${societyCode}</div>
+                        <div class="society-badge-code">${isResident && unitLabel ? `Flat ${unitLabel}` : societyCode}</div>
                     </div>
                     ${needsSetup ? '<span class="nav-badge nav-badge-pending" title="Complete Setup">!</span>' : ''}
                 </div>
@@ -50,74 +52,103 @@ const Components = (() => {
 
             <!-- Navigation Links -->
             <nav class="sidebar-nav">
-                <div>
-                    <div class="nav-group-title">Overview</div>
-                    <ul class="nav-list">
-                        <li>
-                            <a href="dashboard.html" class="nav-link ${activePage === 'dashboard' ? 'active' : ''}">
-                                <i data-lucide="layout-dashboard"></i>
-                                <span>Dashboard</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="society-setup.html" class="nav-link ${activePage === 'society-setup' ? 'active' : ''}">
-                                <i data-lucide="building"></i>
-                                <span>Society Setup</span>
-                                ${needsSetup ? '<span class="nav-badge nav-badge-pending">Setup</span>' : ''}
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+                ${isResident ? `
+                    <!-- Resident Navigation -->
+                    <div>
+                        <div class="nav-group-title">My Home</div>
+                        <ul class="nav-list">
+                            <li>
+                                <a href="resident-dashboard.html" class="nav-link ${activePage === 'resident-dashboard' ? 'active' : ''}">
+                                    <i data-lucide="layout-dashboard"></i>
+                                    <span>Dashboard</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
 
-                <div>
-                    <div class="nav-group-title">Management</div>
-                    <ul class="nav-list">
-                        <li>
-                            <a href="residents.html" class="nav-link ${activePage === 'residents' ? 'active' : ''}">
-                                <i data-lucide="users"></i>
-                                <span>Residents</span>
-                                <span class="nav-badge nav-badge-pending" id="sidebar-pending-badge" style="display: none;">0</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="feedback.html" class="nav-link ${activePage === 'feedback' ? 'active' : ''}">
-                                <i data-lucide="clipboard-list"></i>
-                                <span>Complaints</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="analysis.html" class="nav-link ${activePage === 'analysis' ? 'active' : ''}">
-                                <i data-lucide="pie-chart"></i>
-                                <span>Analytics</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+                    <div>
+                        <div class="nav-group-title">Assistance</div>
+                        <ul class="nav-list">
+                            <li>
+                                <a href="chat.html" class="nav-link ${activePage === 'chat' ? 'active' : ''}">
+                                    <i data-lucide="bot"></i>
+                                    <span>Sahayak AI</span>
+                                    <span class="nav-badge nav-badge-ai">AI</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                ` : `
+                    <!-- Secretary Navigation -->
+                    <div>
+                        <div class="nav-group-title">Overview</div>
+                        <ul class="nav-list">
+                            <li>
+                                <a href="dashboard.html" class="nav-link ${activePage === 'dashboard' ? 'active' : ''}">
+                                    <i data-lucide="layout-dashboard"></i>
+                                    <span>Dashboard</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="society-setup.html" class="nav-link ${activePage === 'society-setup' ? 'active' : ''}">
+                                    <i data-lucide="building"></i>
+                                    <span>Society Setup</span>
+                                    ${needsSetup ? '<span class="nav-badge nav-badge-pending">Setup</span>' : ''}
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
 
-                <div>
-                    <div class="nav-group-title">Intelligence</div>
-                    <ul class="nav-list">
-                        <li>
-                            <a href="chat.html" class="nav-link ${activePage === 'chat' ? 'active' : ''}">
-                                <i data-lucide="bot"></i>
-                                <span>Sahayak AI</span>
-                                <span class="nav-badge nav-badge-ai">AI</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+                    <div>
+                        <div class="nav-group-title">Management</div>
+                        <ul class="nav-list">
+                            <li>
+                                <a href="residents.html" class="nav-link ${activePage === 'residents' ? 'active' : ''}">
+                                    <i data-lucide="users"></i>
+                                    <span>Residents</span>
+                                    <span class="nav-badge nav-badge-pending" id="sidebar-pending-badge" style="display: none;">0</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="feedback.html" class="nav-link ${activePage === 'feedback' ? 'active' : ''}">
+                                    <i data-lucide="clipboard-list"></i>
+                                    <span>Complaints</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="analysis.html" class="nav-link ${activePage === 'analysis' ? 'active' : ''}">
+                                    <i data-lucide="pie-chart"></i>
+                                    <span>Analytics</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
 
-                <div>
-                    <div class="nav-group-title">Settings</div>
-                    <ul class="nav-list">
-                        <li>
-                            <a href="settings.html" class="nav-link ${activePage === 'settings' ? 'active' : ''}">
-                                <i data-lucide="settings"></i>
-                                <span>Settings</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+                    <div>
+                        <div class="nav-group-title">Intelligence</div>
+                        <ul class="nav-list">
+                            <li>
+                                <a href="chat.html" class="nav-link ${activePage === 'chat' ? 'active' : ''}">
+                                    <i data-lucide="bot"></i>
+                                    <span>Sahayak AI</span>
+                                    <span class="nav-badge nav-badge-ai">AI</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <div class="nav-group-title">Settings</div>
+                        <ul class="nav-list">
+                            <li>
+                                <a href="settings.html" class="nav-link ${activePage === 'settings' ? 'active' : ''}">
+                                    <i data-lucide="settings"></i>
+                                    <span>Settings</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                `}
             </nav>
 
             <!-- User Profile & Logout Footer -->
@@ -125,7 +156,7 @@ const Components = (() => {
                 <div class="user-avatar">${userInitial}</div>
                 <div class="user-info">
                     <div class="user-name" title="${userName}">${userName}</div>
-                    <div class="user-role-tag">${role}</div>
+                    <div class="user-role-tag">${isResident && unitLabel ? `Resident · ${unitLabel}` : role}</div>
                 </div>
                 <button type="button" class="btn-logout" id="btn-sidebar-logout" title="Log Out">
                     <i data-lucide="log-out"></i>

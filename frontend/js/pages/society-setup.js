@@ -12,8 +12,8 @@ let createdBlocks = [];
 let societyData = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Authenticate user
-    const user = await Router.requireAuth();
+    // 1. Authenticate user (Secretary only)
+    const user = await Router.requireAuth('secretary');
     if (!user) return;
 
     // 2. Initialize Layout
@@ -77,7 +77,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    Components.hidePageLoader();
+    const skeleton = document.getElementById('setup-skeleton');
+    const mainView = document.getElementById('setup-main-view');
+    if (skeleton) skeleton.style.display = 'none';
+    if (mainView) mainView.style.display = 'block';
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
     // ══════════ Step 1: Submit Society Setup ══════════

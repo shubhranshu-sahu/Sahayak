@@ -453,6 +453,29 @@
     border-radius: var(--radius-lg);
 }
 
+.skeleton-screen-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-6);
+    animation: fadeIn 0.2s var(--ease-out);
+}
+
+.skeleton-banner {
+    height: 150px;
+    width: 100%;
+    border-radius: var(--radius-lg);
+}
+
+.skeleton-stat {
+    height: 120px;
+    border-radius: var(--radius-md);
+}
+
+.skeleton-panel {
+    height: 360px;
+    border-radius: var(--radius-md);
+}
+
 /* Button with Loader */
 .btn-loader {
     display: none;

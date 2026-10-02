@@ -58,10 +58,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 5. Initial Data Loading
     await loadAllData();
 
-    // Hide initial loader
-    if (pageLoader) {
-        pageLoader.classList.add('hidden');
-    }
+    // Reveal real view and hide skeleton
+    const skeleton = document.getElementById('residents-skeleton');
+    const mainView = document.getElementById('residents-main-view');
+    if (skeleton) skeleton.style.display = 'none';
+    if (mainView) mainView.style.display = 'block';
+    if (window.lucide) lucide.createIcons();
 
     // ════════════════════════════════════════════════════════
     // Event Listeners

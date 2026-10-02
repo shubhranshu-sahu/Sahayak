@@ -340,12 +340,55 @@ document.addEventListener('DOMContentLoaded', async () => {
             submitBtn.disabled = false;
 
             if (res.success) {
-                showAlert('Registration submitted! Awaiting secretary approval.', 'success');
-                Toast.success('Registration submitted! You\'ll be able to login once approved.');
-                // Disable form
-                formResident.querySelectorAll('input, select, button[type="submit"]').forEach(el => {
-                    el.disabled = true;
-                });
+                // Render prominent approval card with countdown redirect to homepage
+                formResident.innerHTML = `
+                    <div class="registration-success-card">
+                        <div class="success-icon-badge">
+                            <i data-lucide="check-circle-2"></i>
+                        </div>
+                        <h3>Registration Submitted!</h3>
+                        <p class="success-lead">Your application has been received and forwarded to your society secretary.</p>
+                        
+                        <div class="approval-notice-box">
+                            <i data-lucide="shield-alert" style="color: #E65100; width: 20px; flex-shrink: 0;"></i>
+                            <div>
+                                <strong>Pending Secretary Approval:</strong>
+                                <span>You will be able to log in to your Resident Portal once the secretary verifies and approves your flat allocation.</span>
+                            </div>
+                        </div>
+
+                        <div class="redirect-countdown-bar">
+                            <span>Redirecting to homepage in <strong id="redirect-timer">4</strong>s...</span>
+                            <div class="countdown-progress">
+                                <div class="countdown-fill"></div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-primary auth-submit" id="btn-go-home" style="width: 100%; justify-content: center; margin-top: var(--sp-4);">
+                            <span class="btn-text">Return to Homepage Now</span>
+                        </button>
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons({ nodes: [formResident] });
+
+                let countdown = 15;
+                const timerEl = document.getElementById('redirect-timer');
+                const interval = setInterval(() => {
+                    countdown--;
+                    if (timerEl) timerEl.textContent = countdown;
+                    if (countdown <= 0) {
+                        clearInterval(interval);
+                        window.location.replace('../index.html');
+                    }
+                }, 1000);
+
+                const btnHome = document.getElementById('btn-go-home');
+                if (btnHome) {
+                    btnHome.addEventListener('click', () => {
+                        clearInterval(interval);
+                        window.location.replace('../index.html');
+                    });
+                }
             } else {
                 let errorMsg = res.message || 'Registration failed. Please try again.';
                 if (Array.isArray(res.error) && res.error.length > 0) {
