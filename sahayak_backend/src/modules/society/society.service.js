@@ -158,3 +158,79 @@ export const getSocietyStructure = async (societyId) => {
     blocks: Array.from(blocksMap.values()),
   };
 };
+
+export const getSocietyConfig = async (societyId) => {
+  const [societies] = await pool.execute(
+    'SELECT id, secretary_id, name, society_code, address, city, state, pincode, is_active, metadata FROM societies WHERE id = ?',
+    [societyId]
+  );
+  if (societies.length === 0) {
+    throw { status: 404, message: 'Society not found' };
+  }
+  
+  const society = societies[0];
+  if (society.metadata) {
+    try {
+      society.metadata = JSON.parse(society.metadata);
+    } catch (e) {
+      // already parsed or invalid
+    }
+  }
+
+  return society;
+};
+
+export const updateSocietyConfig = async (societyId, payload) => {
+  const { name, society_code, address, city, state, pincode, metadata } = payload;
+  
+  // Validate society_code format
+  if (society_code) {
+    const codeRegex = /^[A-Z][A-Z-]{2,19}$/;
+    if (!codeRegex.test(society_code)) {
+      throw { status: 400, message: 'Invalid society_code format' };
+    }
+
+    // Check if society code exists and is not the current society
+    const [existingCodes] = await pool.execute(
+      'SELECT id FROM societies WHERE society_code = ? AND id != ?',
+      [society_code, societyId]
+    );
+    if (existingCodes.length > 0) {
+      throw { status: 409, message: 'Society code already in use' };
+    }
+  }
+
+  // Build dynamic update query
+  const updates = [];
+  const values = [];
+
+  const addUpdate = (field, value) => {
+    if (value !== undefined) {
+      updates.push(`${field} = ?`);
+      values.push(value);
+    }
+  };
+
+  addUpdate('name', name);
+  addUpdate('society_code', society_code);
+  addUpdate('address', address);
+  addUpdate('city', city);
+  addUpdate('state', state);
+  addUpdate('pincode', pincode);
+
+  if (metadata !== undefined) {
+    updates.push('metadata = ?');
+    values.push(metadata ? JSON.stringify(metadata) : null);
+  }
+
+  if (updates.length === 0) {
+    return getSocietyConfig(societyId);
+  }
+
+  values.push(societyId);
+
+  const query = `UPDATE societies SET ${updates.join(', ')} WHERE id = ?`;
+  await pool.execute(query, values);
+
+  return getSocietyConfig(societyId);
+};
