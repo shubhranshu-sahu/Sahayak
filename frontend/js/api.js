@@ -96,5 +96,104 @@ const Api = (() => {
         return request(endpoint, { ...opts, method: 'DELETE' });
     }
 
-    return { request, get, post, put, patch, del };
+    /* ── AI Service Helpers (FastAPI on CONFIG.AI_BASE) ── */
+    function aiGet(endpoint, opts = {}) {
+        return request(endpoint, { ...opts, base: CONFIG.AI_BASE, method: 'GET' });
+    }
+
+    function aiPost(endpoint, body, opts = {}) {
+        return request(endpoint, { ...opts, base: CONFIG.AI_BASE, method: 'POST', body });
+    }
+
+    /**
+     * Stream response from AI Service via Server-Sent Events (SSE)
+     * @param {object} params - { message, society_name, secretary_name, onStart, onToken, onDone, onError, signal }
+     */
+    async function aiStreamChat({
+        message,
+        society_name = 'the Society',
+        secretary_name = 'Secretary',
+        onStart = null,
+        onToken = null,
+        onDone = null,
+        onError = null,
+        signal = null,
+    }) {
+        const token = localStorage.getItem(CONFIG.TOKEN_KEY);
+        const url = `${CONFIG.AI_BASE}/chat/message`;
+
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    message,
+                    society_name,
+                    secretary_name,
+                }),
+                signal,
+            });
+
+            if (!res.ok) {
+                let errorMsg = `Server returned status ${res.status}`;
+                try {
+                    const errJson = await res.json();
+                    errorMsg = errJson.detail || errJson.message || errorMsg;
+                } catch (_) {}
+                throw new Error(errorMsg);
+            }
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // Retain incomplete line
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || !trimmed.startsWith('data:')) continue;
+
+                    const jsonStr = trimmed.slice(5).trim();
+                    if (!jsonStr) continue;
+
+                    try {
+                        const event = JSON.parse(jsonStr);
+                        if (event.type === 'start') {
+                            if (onStart) onStart(event);
+                        } else if (event.type === 'token') {
+                            if (onToken) onToken(event.content);
+                        } else if (event.type === 'done') {
+                            if (onDone) onDone(event);
+                        } else if (event.type === 'error') {
+                            if (onError) onError(new Error(event.message || 'Stream error'));
+                        }
+                    } catch (parseErr) {
+                        console.warn('[Api] Failed to parse SSE event:', jsonStr, parseErr);
+                    }
+                }
+            }
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                console.log('[Api] Chat stream aborted by user');
+                return;
+            }
+            console.error('[Api] aiStreamChat failed:', err);
+            if (onError) onError(err);
+        }
+    }
+
+    return { request, get, post, put, patch, del, aiGet, aiPost, aiStreamChat };
 })();

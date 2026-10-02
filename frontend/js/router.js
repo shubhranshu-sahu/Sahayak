@@ -161,7 +161,8 @@ const Router = (() => {
             'dashboard.html',
             'resident-dashboard.html',
             'society-setup.html',
-            'residents.html'
+            'residents.html',
+            'chat.html'
         ].some(p => path.includes(p));
 
         if (isProtectedPage) {
