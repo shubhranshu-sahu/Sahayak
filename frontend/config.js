@@ -7,7 +7,7 @@ const CONFIG = Object.freeze({
     API_BASE: 'https://sahayak-yhn6.onrender.com/api/v1',
 
     /* ── AI Service (Python / FastAPI — Vansh's service) ── */
-    AI_BASE: 'http://localhost:8001',
+    AI_BASE: 'https://sahayak-tkt5.onrender.com',
 
     /* ── App Meta ── */
     APP_NAME: 'Sahayak',
