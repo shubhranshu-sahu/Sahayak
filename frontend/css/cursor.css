@@ -1,0 +1,88 @@
+/* ════════════════════════════════════════════════════════════════
+   Sahayak — Custom Cursor Trail  (cursor.css)
+   Peach dot + burgundy glow, expands on interactive elements
+   ════════════════════════════════════════════════════════════════ */
+
+.cursor-dot {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 8px;
+    height: 8px;
+    background: var(--clr-accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: var(--z-cursor);
+    transition: width 0.3s var(--ease-spring),
+                height 0.3s var(--ease-spring),
+                background 0.3s ease,
+                opacity 0.3s ease;
+    transform: translate(-50%, -50%);
+    mix-blend-mode: difference;
+}
+
+.cursor-ring {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 36px;
+    height: 36px;
+    border: 1.5px solid rgba(242, 212, 184, 0.4);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: calc(var(--z-cursor) - 1);
+    transition: width 0.4s var(--ease-spring),
+                height 0.4s var(--ease-spring),
+                border-color 0.3s ease,
+                background 0.3s ease,
+                opacity 0.3s ease;
+    transform: translate(-50%, -50%);
+}
+
+/* ── Hover on interactive elements ── */
+.cursor-hover .cursor-dot {
+    width: 0;
+    height: 0;
+    opacity: 0;
+}
+
+.cursor-hover .cursor-ring {
+    width: 56px;
+    height: 56px;
+    border-color: var(--clr-accent);
+    background: rgba(242, 212, 184, 0.08);
+}
+
+/* ── Click state ── */
+.cursor-click .cursor-ring {
+    width: 28px;
+    height: 28px;
+    border-color: var(--clr-accent);
+}
+
+/* ── Text cursor variant ── */
+.cursor-text .cursor-dot {
+    width: 3px;
+    height: 24px;
+    border-radius: 2px;
+    background: var(--clr-primary);
+}
+
+.cursor-text .cursor-ring {
+    opacity: 0;
+}
+
+/* ── Hide on touch / mobile ── */
+@media (hover: none) and (pointer: coarse) {
+    .cursor-dot,
+    .cursor-ring {
+        display: none !important;
+    }
+}
+
+/* ── Hide default cursor sitewide (desktop only) ── */
+@media (hover: hover) and (pointer: fine) {
+    * {
+        cursor: none !important;
+    }
+}

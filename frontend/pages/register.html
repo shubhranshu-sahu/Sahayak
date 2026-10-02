@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Register for Sahayak — sign up as a society secretary or join as a resident.">
+    <title>Register — Sahayak</title>
+
+    <link rel="icon" type="image/png" href="../assets/images/logo.png">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/cursor.css">
+    <link rel="stylesheet" href="../css/auth.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+
+<body>
+    <div class="auth-page">
+
+        <!-- ═══ Left: Branding Panel ═══ -->
+        <div class="auth-branding">
+            <div class="auth-branding-shapes">
+                <div class="auth-shape"></div>
+                <div class="auth-shape"></div>
+                <div class="auth-shape"></div>
+            </div>
+
+            <div class="auth-branding-content">
+                <img src="../assets/images/logo.png" alt="Sahayak Logo">
+                <h1>Join Sahayak</h1>
+                <p>
+                    Create your account to start managing your society
+                    or join your community as a resident.
+                </p>
+
+                <div class="auth-branding-features">
+                    <div class="auth-branding-feature">
+                        <i data-lucide="building"></i>
+                        <span>Secretaries: Set up your entire society in minutes</span>
+                    </div>
+                    <div class="auth-branding-feature">
+                        <i data-lucide="home"></i>
+                        <span>Residents: Find your society & unit to join</span>
+                    </div>
+                    <div class="auth-branding-feature">
+                        <i data-lucide="clock"></i>
+                        <span>Registration takes under 2 minutes</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Right: Register Form ═══ -->
+        <div class="auth-form-panel">
+            <a href="../index.html" class="auth-back-link">
+                <i data-lucide="arrow-left"></i>
+                Back to Home
+            </a>
+
+            <div class="auth-form-container">
+                <div class="auth-form-header">
+                    <h2>Create Account</h2>
+                    <p>Already have an account? <a href="login.html">Log in</a></p>
+                </div>
+
+                <!-- ═══ Role Tabs ═══ -->
+                <div class="auth-tabs" id="auth-tabs">
+                    <button class="auth-tab active" data-role="secretary" id="tab-secretary">
+                        <i data-lucide="building-2"></i>
+                        Secretary
+                    </button>
+                    <button class="auth-tab" data-role="resident" id="tab-resident">
+                        <i data-lucide="user"></i>
+                        Resident
+                    </button>
+                </div>
+
+                <!-- Alert box -->
+                <div class="auth-alert alert-error" id="register-alert">
+                    <span class="alert-icon" id="register-alert-icon"><i data-lucide="alert-circle"></i></span>
+                    <span id="register-alert-text"></span>
+                </div>
+
+                <!-- ═══ Secretary Registration Form ═══ -->
+                <form id="form-secretary" novalidate>
+                    <div class="form-group">
+                        <label class="form-label" for="sec-name">Full Name</label>
+                        <div class="form-input-wrapper">
+                            <i data-lucide="user" class="form-input-icon"></i>
+                            <input type="text" class="form-input" id="sec-name" placeholder="e.g. Purvi Parashar" required autocomplete="name">
+                        </div>
+                        <div class="form-error" id="sec-name-error">Name is required.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="sec-email">Email Address</label>
+                        <div class="form-input-wrapper">
+                            <i data-lucide="mail" class="form-input-icon"></i>
+                            <input type="email" class="form-input" id="sec-email" placeholder="you@example.com" required autocomplete="email">
+                        </div>
+                        <div class="form-error" id="sec-email-error">Please enter a valid email.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="sec-phone">Phone Number</label>
+                        <div class="form-input-wrapper">
+                            <i data-lucide="phone" class="form-input-icon"></i>
+                            <input type="tel" class="form-input" id="sec-phone" placeholder="+919876543210" required autocomplete="tel">
+                        </div>
+                        <div class="form-error" id="sec-phone-error">Enter a valid phone number.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="sec-password">Password</label>
+                        <div class="form-input-wrapper">
+                            <i data-lucide="lock" class="form-input-icon"></i>
+                            <input type="password" class="form-input" id="sec-password" placeholder="Min 8 characters" required autocomplete="new-password">
+                            <button type="button" class="form-password-toggle" data-target="sec-password" aria-label="Toggle password">
+                                <i data-lucide="eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-error" id="sec-password-error">Password must be at least 8 characters.</div>
+                    </div>
+
+                    <button type="submit" class="auth-submit" id="sec-submit">
+                        <span class="btn-text">Register as Secretary</span>
+                        <div class="spinner"></div>
+                    </button>
+                </form>
+
+                <!-- ═══ Resident Registration Form ═══ -->
+                <form id="form-resident" style="display: none;" novalidate>
+                    <div class="form-group">
+                        <label class="form-label" for="res-name">Full Name</label>
+                        <div class="form-input-wrapper">
+                            <i data-lucide="user" class="form-input-icon"></i>
+                            <input type="text" class="form-input" id="res-name" placeholder="e.g. Rohan Sharma" required autocomplete="name">
+                        </div>
+                        <div class="form-error" id="res-name-error">Name is required.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="res-email">Email Address</label>
+                        <div class="form-input-wrapper">
+                            <i data-lucide="mail" class="form-input-icon"></i>
+                            <input type="email" class="form-input" id="res-email" placeholder="you@example.com" required autocomplete="email">
+                        </div>
+                        <div class="form-error" id="res-email-error">Please enter a valid email.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="res-phone">Phone Number</label>
+                        <div class="form-input-wrapper">
+                            <i data-lucide="phone" class="form-input-icon"></i>
+                            <input type="tel" class="form-input" id="res-phone" placeholder="+919876543210" required autocomplete="tel">
+                        </div>
+                        <div class="form-error" id="res-phone-error">Enter a valid phone number.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="res-password">Password</label>
+                        <div class="form-input-wrapper">
+                            <i data-lucide="lock" class="form-input-icon"></i>
+                            <input type="password" class="form-input" id="res-password" placeholder="Min 8 characters" required autocomplete="new-password">
+                            <button type="button" class="form-password-toggle" data-target="res-password" aria-label="Toggle password">
+                                <i data-lucide="eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-error" id="res-password-error">Password must be at least 8 characters.</div>
+                    </div>
+
+                    <!-- ═══ Cascading Dropdowns: Society → Block → Floor → Unit ═══ -->
+                    <div class="auth-divider">
+                        <span>Select Your Unit</span>
+                    </div>
+
+                    <div class="cascade-grid">
+                        <!-- Society -->
+                        <div class="form-group cascade-step" id="step-society">
+                            <label class="form-label" for="res-society">Society</label>
+                            <select class="form-select" id="res-society" required>
+                                <option value="" disabled selected>Loading societies...</option>
+                            </select>
+                            <div class="cascade-loader"></div>
+                            <div class="form-error" id="res-society-error">Please select a society.</div>
+                        </div>
+
+                        <!-- Block -->
+                        <div class="form-group cascade-step" id="step-block">
+                            <label class="form-label" for="res-block">Block</label>
+                            <select class="form-select" id="res-block" disabled required>
+                                <option value="" disabled selected>Select society first</option>
+                            </select>
+                            <div class="cascade-loader"></div>
+                            <div class="form-error" id="res-block-error">Please select a block.</div>
+                        </div>
+
+                        <!-- Floor -->
+                        <div class="form-group cascade-step" id="step-floor">
+                            <label class="form-label" for="res-floor">Floor</label>
+                            <select class="form-select" id="res-floor" disabled required>
+                                <option value="" disabled selected>Select block first</option>
+                            </select>
+                            <div class="cascade-loader"></div>
+                            <div class="form-error" id="res-floor-error">Please select a floor.</div>
+                        </div>
+
+                        <!-- Unit -->
+                        <div class="form-group cascade-step" id="step-unit">
+                            <label class="form-label" for="res-unit">Unit</label>
+                            <select class="form-select" id="res-unit" disabled required>
+                                <option value="" disabled selected>Select floor first</option>
+                            </select>
+                            <div class="cascade-loader"></div>
+                            <div class="form-error" id="res-unit-error">Please select a vacant unit.</div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="auth-submit" id="res-submit">
+                        <span class="btn-text">Register as Resident</span>
+                        <div class="spinner"></div>
+                    </button>
+
+                    <p class="form-hint" style="text-align: center; margin-top: var(--sp-3);">
+                        Your registration will need approval from the society secretary.
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="../config.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/router.js"></script>
+    <script src="../js/cursor.js"></script>
+    <script src="../js/pages/register.js"></script>
+</body>
+
+</html>

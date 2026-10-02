@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Log in to Sahayak — access your society dashboard, manage residents, and chat with your AI secretary.">
+    <title>Login — Sahayak</title>
+
+    <link rel="icon" type="image/png" href="../assets/images/logo.png">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/cursor.css">
+    <link rel="stylesheet" href="../css/auth.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+
+<body>
+    <div class="auth-page">
+
+        <!-- ═══ Left: Branding Panel ═══ -->
+        <div class="auth-branding">
+            <div class="auth-branding-shapes">
+                <div class="auth-shape"></div>
+                <div class="auth-shape"></div>
+                <div class="auth-shape"></div>
+            </div>
+
+            <div class="auth-branding-content">
+                <img src="../assets/images/logo.png" alt="Sahayak Logo">
+                <h1>Welcome Back</h1>
+                <p>
+                    Your society is waiting. Log in to manage your community,
+                    approve residents, and chat with your AI secretary.
+                </p>
+
+                <div class="auth-branding-features">
+                    <div class="auth-branding-feature">
+                        <i data-lucide="shield-check"></i>
+                        <span>Secure JWT authentication</span>
+                    </div>
+                    <div class="auth-branding-feature">
+                        <i data-lucide="bot"></i>
+                        <span>AI-powered secretary at your service</span>
+                    </div>
+                    <div class="auth-branding-feature">
+                        <i data-lucide="zap"></i>
+                        <span>Real-time dashboard updates</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Right: Login Form ═══ -->
+        <div class="auth-form-panel">
+            <a href="../index.html" class="auth-back-link">
+                <i data-lucide="arrow-left"></i>
+                Back to Home
+            </a>
+
+            <div class="auth-form-container">
+                <div class="auth-form-header">
+                    <h2>Log In</h2>
+                    <p>Don't have an account? <a href="register.html">Sign up</a></p>
+                </div>
+
+                <!-- Alert box for errors -->
+                <div class="auth-alert alert-error" id="login-alert">
+                    <span class="alert-icon" id="login-alert-icon"><i data-lucide="alert-circle"></i></span>
+                    <span id="login-alert-text"></span>
+                </div>
+
+                <form id="login-form" novalidate>
+                    <div class="form-group">
+                        <label class="form-label" for="login-email">Email Address</label>
+                        <div class="form-input-wrapper">
+                            <i data-lucide="mail" class="form-input-icon"></i>
+                            <input
+                                type="email"
+                                class="form-input"
+                                id="login-email"
+                                placeholder="you@example.com"
+                                required
+                                autocomplete="email"
+                            >
+                        </div>
+                        <div class="form-error" id="login-email-error">Please enter a valid email.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="login-password">Password</label>
+                        <div class="form-input-wrapper">
+                            <i data-lucide="lock" class="form-input-icon"></i>
+                            <input
+                                type="password"
+                                class="form-input"
+                                id="login-password"
+                                placeholder="Enter your password"
+                                required
+                                autocomplete="current-password"
+                            >
+                            <button type="button" class="form-password-toggle" id="toggle-password" aria-label="Toggle password visibility">
+                                <i data-lucide="eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-error" id="login-password-error">Password is required.</div>
+                    </div>
+
+                    <button type="submit" class="auth-submit" id="login-submit">
+                        <span class="btn-text">Log In</span>
+                        <div class="spinner"></div>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="../config.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/router.js"></script>
+    <script src="../js/cursor.js"></script>
+    <script src="../js/pages/login.js"></script>
+</body>
+
+</html>

@@ -31,7 +31,9 @@
 | **Public Discovery** | `GET` | `/api/v1/public/societies/:societyId/blocks` | No (Public) | Public |
 | **Public Discovery** | `GET` | `/api/v1/public/blocks/:blockId/floors` | No (Public) | Public |
 | **Public Discovery** | `GET` | `/api/v1/public/floors/:floorId/units` | No (Public) | Public |
+| **Society Setup** | `GET` | `/api/v1/society/setup` | **Yes (JWT)** | `secretary` |
 | **Society Setup** | `POST` | `/api/v1/society/setup` | **Yes (JWT)** | `secretary` |
+| **Society Setup** | `PUT` | `/api/v1/society/setup` | **Yes (JWT)** | `secretary` |
 | **Society Setup** | `POST` | `/api/v1/society/blocks` | **Yes (JWT)** | `secretary` |
 | **Society Setup** | `POST` | `/api/v1/blocks/:blockId/floors/bulk` | **Yes (JWT)** | `secretary` |
 | **Society Setup** | `POST` | `/api/v1/floors/:floorId/units/bulk` | **Yes (JWT)** | `secretary` |
@@ -297,13 +299,66 @@ Check if the backend server is awake and running.
 
 > All endpoints below require `Authorization: Bearer <secretary_token>`.
 
+#### 0. Get Society Setup Configuration
+* **Path**: `GET /api/v1/society/setup`
+* **Response (`200 OK`)**:
+  ```json
+  {
+    "success": true,
+    "message": "Society configuration retrieved",
+    "data": {
+      "id": 1,
+      "name": "Sunrise Apartments",
+      "society_code": "SUNRISE-DEL",
+      "address": "Plot 14, Sector 21, Dwarka",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110075",
+      "metadata": {
+        "registration_number": "RWA-DEL-2022",
+        "contact_email": "secretary@sunrise.com"
+      }
+    }
+  }
+  ```
+
+#### 0.5. Update Society Configuration
+* **Path**: `PUT /api/v1/society/setup`
+* **Request Body** (All fields optional):
+  ```json
+  {
+    "name": "Sunrise Apartments Updated",
+    "pincode": "110076"
+  }
+  ```
+* **Response (`200 OK`)**:
+  ```json
+  {
+    "success": true,
+    "message": "Society configuration updated",
+    "data": {
+      "id": 1,
+      "name": "Sunrise Apartments Updated",
+      "society_code": "SUNRISE-DEL",
+      "address": "Plot 14, Sector 21, Dwarka",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110076",
+      "metadata": {
+        "registration_number": "RWA-DEL-2022",
+        "contact_email": "secretary@sunrise.com"
+      }
+    }
+  }
+  ```
+
 #### 1. Onboard / Create Society
 * **Path**: `POST /api/v1/society/setup`
 * **Request Body**:
   ```json
   {
     "name": "Sunrise Apartments",
-    "society_code": "SUNRISE-22",
+    "society_code": "SUNRISE-DEL",
     "address": "Plot 14, Sector 21, Dwarka",
     "city": "New Delhi",
     "state": "Delhi",
@@ -323,7 +378,7 @@ Check if the backend server is awake and running.
     "data": {
       "societyId": 1,
       "name": "Sunrise Apartments",
-      "societyCode": "SUNRISE-22"
+      "societyCode": "SUNRISE-DEL"
     }
   }
   ```

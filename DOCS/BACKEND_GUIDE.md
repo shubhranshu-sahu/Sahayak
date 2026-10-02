@@ -223,7 +223,7 @@ Base URL prefix: `/api/v1`
       "society": {
         "id": 12,
         "name": "Sunrise Apartments",
-        "societyCode": "SUNRISE-22"
+        "societyCode": "SUNRISE-DEL"
       },
       "unit": {
         "id": 45,
@@ -246,7 +246,7 @@ Base URL prefix: `/api/v1`
   ```json
   {
     "name": "Sunrise Apartments",
-    "society_code": "SUNRISE-22",
+    "society_code": "SUNRISE-DEL",
     "address": "Plot 14, Sector 21, Dwarka",
     "city": "New Delhi",
     "state": "Delhi",
@@ -270,14 +270,96 @@ Base URL prefix: `/api/v1`
     "data": {
       "societyId": 12,
       "name": "Sunrise Apartments",
-      "societyCode": "SUNRISE-22"
+      "societyCode": "SUNRISE-DEL"
     }
   }
   ```
 
 ---
 
-#### 2. Add Block
+#### 2. Fetch Society Setup Configuration (Added by Frontend / Vansh)
+> **Why Added**: When a secretary logs in or returns to the Society Setup screen / Dashboard, the frontend needs to fetch existing society details to pre-populate Step 1 (Society Information) so the secretary does not see empty inputs.
+- **Endpoint**: `GET /api/v1/society/setup`
+- **Access**: Private (Role: `secretary`)
+- **Business Logic**:
+  1. Ensure secretary has an associated society (`req.user.societyId`). If null, return `404 Not Found` (`"No society found for this secretary"`).
+  2. Fetch society record from `societies` table (`id`, `secretary_id`, `name`, `society_code`, `address`, `city`, `state`, `pincode`, `is_active`, `metadata`).
+  3. Safely parse `metadata` if stored as JSON string.
+- **Response** (`200 OK`):
+  ```json
+  {
+    "success": true,
+    "message": "Society configuration retrieved",
+    "data": {
+      "id": 1,
+      "secretary_id": 1,
+      "name": "Sunrise Apartments",
+      "society_code": "SUNRISE-DEL",
+      "address": "Plot 14, Sector 21, Dwarka",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110075",
+      "is_active": 1,
+      "metadata": {
+        "registration_number": "RWA-DEL-2022",
+        "contact_email": "secretary@sunrise.com"
+      }
+    }
+  }
+  ```
+
+---
+
+#### 3. Update Society Configuration (Added by Frontend / Vansh)
+> **Why Added**: If the secretary edits society details (e.g. address, registration number, or pincode) on re-visiting the form, calling `POST` would fail due to the `uq_societies_secretary` and `society_code` unique constraints. This `PUT` endpoint enables safe, partial in-place updates.
+- **Endpoint**: `PUT /api/v1/society/setup`
+- **Access**: Private (Role: `secretary`)
+- **Request Body** (All fields optional):
+  ```json
+  {
+    "name": "Sunrise Apartments Updated",
+    "society_code": "SUNRISE-DEL",
+    "address": "Plot 14, Sector 21, Dwarka",
+    "city": "New Delhi",
+    "state": "Delhi",
+    "pincode": "110076",
+    "metadata": {
+      "registration_number": "RWA-DEL-2022",
+      "contact_email": "secretary@sunrise.com"
+    }
+  }
+  ```
+- **Business Logic**:
+  1. Ensure secretary has `req.user.societyId`.
+  2. If `society_code` is provided:
+     - Validate format (`^[A-Z][A-Z-]{2,19}$`).
+     - Check if another society already uses this code (`SELECT id FROM societies WHERE society_code = ? AND id != ?`). If yes, return `409 Conflict`.
+  3. Dynamically update modified columns (`name`, `society_code`, `address`, `city`, `state`, `pincode`, `metadata`).
+  4. Return the refreshed society configuration.
+- **Response** (`200 OK`):
+  ```json
+  {
+    "success": true,
+    "message": "Society configuration updated",
+    "data": {
+      "id": 1,
+      "name": "Sunrise Apartments Updated",
+      "society_code": "SUNRISE-DEL",
+      "address": "Plot 14, Sector 21, Dwarka",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110076",
+      "metadata": {
+        "registration_number": "RWA-DEL-2022",
+        "contact_email": "secretary@sunrise.com"
+      }
+    }
+  }
+  ```
+
+---
+
+#### 4. Add Block
 - **Endpoint**: `POST /api/v1/society/blocks`
 - **Access**: Private (Role: `secretary`)
 - **Request Body**:
@@ -305,7 +387,7 @@ Base URL prefix: `/api/v1`
 
 ---
 
-#### 3. Add Single Floor or Bulk Floors to Block
+#### 5. Add Single Floor or Bulk Floors to Block
 - **Endpoint**: `POST /api/v1/blocks/:blockId/floors/bulk`
 - **Access**: Private (Role: `secretary`)
 - **Request Body**:
@@ -331,7 +413,7 @@ Base URL prefix: `/api/v1`
 
 ---
 
-#### 4. Bulk Add Units on a Floor
+#### 6. Bulk Add Units on a Floor
 - **Endpoint**: `POST /api/v1/floors/:floorId/units/bulk`
 - **Access**: Private (Role: `secretary`)
 - **Request Body**:
@@ -368,7 +450,7 @@ Base URL prefix: `/api/v1`
 
 ---
 
-#### 5. Get Complete Society Structure Tree
+#### 7. Get Complete Society Structure Tree
 - **Endpoint**: `GET /api/v1/society/structure`
 - **Access**: Private (Role: `secretary`)
 - **Business Logic**:
@@ -424,7 +506,7 @@ Base URL prefix: `/api/v1`
       {
         "id": 12,
         "name": "Sunrise Apartments",
-        "societyCode": "SUNRISE-22",
+        "societyCode": "SUNRISE-DEL",
         "city": "New Delhi"
       }
     ]
@@ -654,3 +736,4 @@ Base URL prefix: `/api/v1`
   - Resident Registration (`users` insert + `units` occupied status update).
   - Resident Rejection (`users` rejected status + `units` vacant status rollback).
 - [ ] **Society Kill Switch**: Ensure auth middleware verifies `societies.is_active` so suspended societies cannot access endpoints.
+- [x] **Society Configuration Fetch & Update (Added by Vansh)**: `GET /api/v1/society/setup` and `PUT /api/v1/society/setup` implemented in `src/modules/society/` to support frontend form repopulation and society info modifications.
