@@ -100,7 +100,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     Router.redirectToDashboard(res.data.user);
                 }, 600);
             } else {
-                showAlert(res.message || 'Login failed. Please try again.');
+                const msg = res.message || 'Login failed. Please try again.';
+                if (msg.toLowerCase().includes('pending')) {
+                    showAlert('Registration pending secretary approval. You will be able to log in once approved by your society secretary.', 'warning');
+                } else {
+                    showAlert(msg, 'error');
+                }
             }
         });
     }

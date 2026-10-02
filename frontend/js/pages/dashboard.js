@@ -3,8 +3,8 @@
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Authenticate user
-    const user = await Router.requireAuth();
+    // 1. Authenticate user (Secretary only)
+    const user = await Router.requireAuth('secretary');
     if (!user) return;
 
     // 2. Initialize Layout
@@ -33,9 +33,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 3. Fetch Dashboard Metrics
     await loadDashboardData(user);
 
-    // Hide page loader
-    Components.hidePageLoader();
-    lucide.createIcons();
+    // 4. Reveal real dashboard content and hide skeleton
+    const skeleton = document.getElementById('dashboard-skeleton');
+    const mainView = document.getElementById('dashboard-main-view');
+    if (skeleton) skeleton.style.display = 'none';
+    if (mainView) mainView.style.display = 'block';
+
+    if (window.lucide) lucide.createIcons();
 
     // Quick AI Form trigger
     const aiForm = document.getElementById('ai-quick-form');

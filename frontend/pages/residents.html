@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Residents & Approvals — Sahayak</title>
+    <meta name="description" content="Review pending resident applications and manage approved society residents.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/cursor.css">
+</head>
+
+<body>
+    <!-- App Layout -->
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside id="app-sidebar"></aside>
+
+        <!-- Main Workspace -->
+        <main class="main-workspace">
+            <!-- Topbar -->
+            <header id="app-topbar"></header>
+
+            <!-- Page Body -->
+            <div class="content-body">
+                <!-- Skeleton Placeholder (Shown during initial data load) -->
+                <div id="residents-skeleton" class="skeleton-screen-wrapper">
+                    <div class="skeleton skeleton-banner"></div>
+                    <div class="stats-grid" style="margin-bottom: var(--sp-6);">
+                        <div class="skeleton skeleton-stat"></div>
+                        <div class="skeleton skeleton-stat"></div>
+                        <div class="skeleton skeleton-stat"></div>
+                    </div>
+                    <div class="skeleton skeleton-panel"></div>
+                </div>
+
+                <!-- Real Content -->
+                <div id="residents-main-view" style="display: none;">
+                    <!-- Header Banner -->
+                <div class="residents-page-header">
+                    <div>
+                        <div class="header-badge">
+                            <i data-lucide="shield-check"></i>
+                            <span>Access Control & Directory</span>
+                        </div>
+                        <h2 class="header-title">Resident Approvals & Directory</h2>
+                        <p class="header-subtitle">Review new resident sign-up requests, verify flat allocations, and manage your society's verified member directory.</p>
+                    </div>
+
+                    <div class="header-actions">
+                        <button type="button" class="btn-refresh" id="btn-refresh-residents" title="Refresh list">
+                            <i data-lucide="rotate-cw" id="icon-refresh"></i>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3 Top Metric Cards -->
+                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: var(--sp-6);">
+                    <!-- Pending Review -->
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-title">Pending Approvals</span>
+                            <div class="stat-icon warning">
+                                <i data-lucide="clock"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" id="stat-pending-count">0</div>
+                        <div class="stat-card-footer">
+                            <span class="stat-badge amber" id="stat-pending-sub">Awaiting Decision</span>
+                        </div>
+                    </div>
+
+                    <!-- Active Residents -->
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-title">Approved Residents</span>
+                            <div class="stat-icon success">
+                                <i data-lucide="user-check"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" id="stat-active-count">0</div>
+                        <div class="stat-card-footer">
+                            <span class="stat-badge positive">Verified Members</span>
+                        </div>
+                    </div>
+
+                    <!-- Total Units / Occupancy -->
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-title">Occupancy Overview</span>
+                            <div class="stat-icon primary">
+                                <i data-lucide="building"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" id="stat-occupancy-rate">--%</div>
+                        <div class="stat-card-footer">
+                            <span id="stat-occupied-units">0 Occupied</span>
+                            <span id="stat-vacant-units">· 0 Vacant</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs & Filter Bar -->
+                <div class="residents-control-bar">
+                    <!-- Tab Switcher -->
+                    <div class="residents-tabs">
+                        <button type="button" class="resident-tab active" id="tab-btn-pending" data-tab="pending">
+                            <i data-lucide="user-clock"></i>
+                            <span>Pending Approvals</span>
+                            <span class="tab-badge warning" id="badge-pending-count">0</span>
+                        </button>
+                        <button type="button" class="resident-tab" id="tab-btn-active" data-tab="active">
+                            <i data-lucide="users"></i>
+                            <span>Approved Residents</span>
+                            <span class="tab-badge" id="badge-active-count">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Search and Block Filter -->
+                    <div class="residents-filter-group">
+                        <div class="search-input-wrapper">
+                            <i data-lucide="search" class="search-icon"></i>
+                            <input type="text" id="search-input" class="search-input" placeholder="Search by name, flat (A-101), phone...">
+                            <button type="button" id="btn-clear-search" class="btn-clear-search" style="display: none;">
+                                <i data-lucide="x"></i>
+                            </button>
+                        </div>
+
+                        <select id="filter-block-select" class="block-filter-select">
+                            <option value="">All Blocks</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Tab Views -->
+                <!-- 1. PENDING APPROVALS VIEW -->
+                <div id="view-pending" class="tab-content-view">
+                    <div class="panel-card">
+                        <div class="panel-header" style="padding: var(--sp-4) var(--sp-6);">
+                            <div style="display: flex; align-items: center; gap: var(--sp-2);">
+                                <h3 class="panel-title" style="font-size: var(--fs-md);">
+                                    <i data-lucide="clock" style="color: var(--clr-warning);"></i>
+                                    Pending Registration Requests
+                                </h3>
+                                <span class="pending-queue-badge" id="pending-queue-info">0 requests</span>
+                            </div>
+                        </div>
+
+                        <div class="panel-body" style="padding: 0;">
+                            <!-- List Container -->
+                            <div id="pending-cards-container" class="pending-cards-grid">
+                                <!-- Skeleton Loaders -->
+                                <div class="skeleton-resident-row"></div>
+                                <div class="skeleton-resident-row"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. ACTIVE RESIDENTS VIEW -->
+                <div id="view-active" class="tab-content-view" style="display: none;">
+                    <div class="panel-card">
+                        <div class="panel-header" style="padding: var(--sp-4) var(--sp-6);">
+                            <div style="display: flex; align-items: center; gap: var(--sp-2);">
+                                <h3 class="panel-title" style="font-size: var(--fs-md);">
+                                    <i data-lucide="users" style="color: var(--clr-primary);"></i>
+                                    Verified Resident Directory
+                                </h3>
+                                <span class="active-dir-badge" id="active-dir-info">0 verified</span>
+                            </div>
+                        </div>
+
+                        <div class="panel-body" style="padding: 0;">
+                            <!-- Table View -->
+                            <div class="table-responsive">
+                                <table class="residents-table" id="active-residents-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Resident</th>
+                                            <th>Flat / Unit</th>
+                                            <th>Block & Floor</th>
+                                            <th>Contact</th>
+                                            <th>Status</th>
+                                            <th style="text-align: right;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="active-residents-tbody">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div> <!-- End #residents-main-view -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Rejection Confirmation Modal -->
+    <div id="reject-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon-badge danger">
+                    <i data-lucide="alert-triangle"></i>
+                </div>
+                <div>
+                    <h3 class="modal-title">Reject Registration Request</h3>
+                    <p class="modal-subtitle">Confirm unit release back to society pool</p>
+                </div>
+                <button type="button" class="btn-modal-close" id="btn-close-reject-modal" aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <p>Are you sure you want to reject the application for <strong id="modal-resident-name" style="color: var(--clr-primary);">Resident</strong>?</p>
+                <div class="modal-unit-warning">
+                    <i data-lucide="info" style="color: #D32F2F; width: 18px; flex-shrink: 0;"></i>
+                    <div>
+                        <strong>Unit Rollback:</strong> Flat <span id="modal-resident-unit" style="font-weight: 700;">--</span> will immediately be released from occupied to <strong>vacant</strong>, making it available for other residents.
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="btn-cancel-reject">Cancel</button>
+                <button type="button" class="btn-danger" id="btn-confirm-reject">
+                    <span class="btn-text">Confirm Rejection</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="../config.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/router.js"></script>
+    <script src="../js/components.js"></script>
+    <script src="../js/cursor.js"></script>
+    <script src="../js/animations.js"></script>
+    <script src="../js/pages/residents.js"></script>
+</body>
+
+</html>

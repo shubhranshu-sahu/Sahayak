@@ -19,12 +19,6 @@
 </head>
 
 <body>
-    <!-- Full-page initial loader -->
-    <div id="app-page-loader" class="page-loader">
-        <div class="loader-spinner"></div>
-        <div class="loader-text" id="app-page-loader-text">Loading society setup wizard...</div>
-    </div>
-
     <!-- App Layout -->
     <div class="app-layout">
         <!-- Sidebar -->
@@ -37,7 +31,13 @@
 
             <!-- Wizard Body -->
             <div class="content-body">
-                <div class="wizard-container">
+                <!-- Skeleton Placeholder (Shown during initial data load) -->
+                <div id="setup-skeleton" class="skeleton-screen-wrapper">
+                    <div class="skeleton" style="height: 50px; width: 100%; border-radius: var(--radius-md); margin-bottom: var(--sp-4);"></div>
+                    <div class="skeleton skeleton-panel" style="height: 480px;"></div>
+                </div>
+
+                <div class="wizard-container" id="setup-main-view" style="display: none;">
                     <!-- Progress Stepper -->
                     <div class="stepper">
                         <div class="step-item active" id="step-node-1">

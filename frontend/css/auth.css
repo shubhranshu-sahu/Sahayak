@@ -587,3 +587,100 @@
         flex-direction: column;
     }
 }
+
+/* ══════════ Registration Success Card & Redirect Bar ══════════ */
+.registration-success-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: var(--sp-6) var(--sp-2);
+    animation: fadeIn 0.4s var(--ease-out);
+}
+
+.success-icon-badge {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%);
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--sp-4);
+    box-shadow: 0 6px 16px rgba(46, 125, 50, 0.3);
+}
+
+.success-icon-badge i {
+    width: 32px;
+    height: 32px;
+}
+
+.registration-success-card h3 {
+    font-size: var(--fs-xl);
+    font-weight: var(--fw-bold);
+    color: var(--clr-primary);
+    margin-bottom: var(--sp-2);
+}
+
+.success-lead {
+    font-size: var(--fs-sm);
+    color: var(--clr-text-secondary);
+    line-height: 1.5;
+    margin-bottom: var(--sp-5);
+}
+
+.approval-notice-box {
+    width: 100%;
+    background: #FFF8E1;
+    border: 1.5px solid #FFE082;
+    border-radius: var(--radius-md);
+    padding: var(--sp-4);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-3);
+    text-align: left;
+    font-size: var(--fs-xs);
+    color: #B26A00;
+    line-height: 1.5;
+    margin-bottom: var(--sp-5);
+}
+
+.approval-notice-box strong {
+    display: block;
+    font-weight: var(--fw-bold);
+    color: #E65100;
+    margin-bottom: 2px;
+}
+
+.redirect-countdown-bar {
+    width: 100%;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-medium);
+    color: var(--clr-text-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+}
+
+.countdown-progress {
+    width: 100%;
+    height: 4px;
+    background: rgba(92, 26, 51, 0.1);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.countdown-fill {
+    height: 100%;
+    background: var(--clr-primary);
+    border-radius: var(--radius-full);
+    width: 100%;
+    animation: countdownShrink 4s linear forwards;
+}
+
+@keyframes countdownShrink {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+

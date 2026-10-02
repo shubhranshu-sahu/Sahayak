@@ -1,6 +1,7 @@
 /**
- * Sahayak — Router / Auth Guard  (router.js)
- * Checks JWT validity and redirects based on role.
+ * Sahayak — Router / Auth Guard (router.js)
+ * Checks JWT validity, enforces role-based route access, manages session lifecycle,
+ * redirects to homepage on logout, and prevents back-button cache exposure.
  */
 
 const Router = (() => {
@@ -42,12 +43,17 @@ const Router = (() => {
     }
 
     /**
-     * Clear auth data and redirect to login
+     * Clear auth data and redirect to homepage (index.html) with history replacement
      */
     function logout() {
         localStorage.removeItem(CONFIG.TOKEN_KEY);
         localStorage.removeItem(CONFIG.USER_KEY);
-        window.location.href = resolvePath('login.html');
+        
+        const isPagesDir = window.location.pathname.includes('/pages/');
+        const homeUrl = isPagesDir ? '../index.html' : 'index.html';
+        
+        // Use replace so user cannot press Back button to revisit authenticated state
+        window.location.replace(homeUrl);
     }
 
     /**
@@ -71,7 +77,7 @@ const Router = (() => {
             return res.data;
         }
 
-        // Token invalid — clear everything
+        // Token invalid or expired — clear everything
         localStorage.removeItem(CONFIG.TOKEN_KEY);
         localStorage.removeItem(CONFIG.USER_KEY);
         return null;
@@ -79,55 +85,93 @@ const Router = (() => {
 
     /**
      * Redirect user to the correct dashboard based on role + society status.
-     * Call this after login or on protected page load.
      */
     function redirectToDashboard(user) {
         if (!user) {
-            window.location.href = resolvePath('login.html');
+            const isPagesDir = window.location.pathname.includes('/pages/');
+            window.location.replace(isPagesDir ? 'login.html' : 'pages/login.html');
             return;
         }
 
         if (user.role === 'secretary') {
             // Secretary without a society → setup wizard
             if (!user.societyId && (!user.society || !user.society.id)) {
-                window.location.href = resolvePath('society-setup.html');
+                window.location.replace(resolvePath('society-setup.html'));
             } else {
-                window.location.href = resolvePath('dashboard.html');
+                window.location.replace(resolvePath('dashboard.html'));
             }
         } else if (user.role === 'resident') {
-            window.location.href = resolvePath('dashboard.html');
+            // Resident → dedicated resident dashboard
+            window.location.replace(resolvePath('resident-dashboard.html'));
         } else {
-            // Unknown role — go to dashboard anyway
-            window.location.href = resolvePath('dashboard.html');
+            window.location.replace(resolvePath('dashboard.html'));
         }
     }
 
     /**
-     * Guard for protected pages.
-     * Call this at the top of any protected page's script.
-     * Returns the validated user object, or redirects to login.
+     * Guard for protected pages with optional role whitelist.
+     * Usage: await Router.requireAuth('secretary') or await Router.requireAuth(['secretary', 'resident'])
      */
-    async function requireAuth() {
-        const user = await validateAndGetUser();
-        if (!user) {
-            window.location.href = resolvePath('login.html');
+    async function requireAuth(allowedRoles = null) {
+        if (!getToken()) {
+            const isPagesDir = window.location.pathname.includes('/pages/');
+            window.location.replace(isPagesDir ? 'login.html' : 'pages/login.html');
             return null;
         }
+
+        const user = await validateAndGetUser();
+        if (!user) {
+            const isPagesDir = window.location.pathname.includes('/pages/');
+            window.location.replace(isPagesDir ? 'login.html' : 'pages/login.html');
+            return null;
+        }
+
+        // Enforce role-based access control if specified
+        if (allowedRoles) {
+            const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+            if (!roles.includes(user.role)) {
+                console.warn(`Access denied for role '${user.role}' to this page. Redirecting.`);
+                redirectToDashboard(user);
+                return null;
+            }
+        }
+
         return user;
     }
 
     /**
      * Guard for public-only pages (login, register).
-     * If already logged in, redirect to dashboard.
+     * If already logged in, redirect to appropriate dashboard.
      */
     async function requireGuest() {
-        if (!getToken()) return; // Not logged in, good
+        if (!getToken()) return;
 
         const user = await validateAndGetUser();
         if (user) {
             redirectToDashboard(user);
         }
     }
+
+    // ════════════════════════════════════════════════════════
+    // Prevent Back-Forward Cache (bfcache) Leaks on Logout
+    // ════════════════════════════════════════════════════════
+    window.addEventListener('pageshow', (event) => {
+        const path = window.location.pathname;
+        const isProtectedPage = [
+            'dashboard.html',
+            'resident-dashboard.html',
+            'society-setup.html',
+            'residents.html'
+        ].some(p => path.includes(p));
+
+        if (isProtectedPage) {
+            // If page was loaded from browser back/forward cache and user is logged out
+            if (event.persisted || !isLoggedIn()) {
+                const isPagesDir = path.includes('/pages/');
+                window.location.replace(isPagesDir ? '../index.html' : 'index.html');
+            }
+        }
+    });
 
     return {
         getToken,
@@ -141,3 +185,4 @@ const Router = (() => {
         requireGuest,
     };
 })();
+
