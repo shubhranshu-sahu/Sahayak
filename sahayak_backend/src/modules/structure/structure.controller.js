@@ -33,3 +33,58 @@ export const bulkAddUnits = async (req, res, next) => {
     next(error);
   }
 };
+
+export const deleteFloor = async (req, res, next) => {
+  try {
+    const { blockId, floorId } = req.params;
+    const data = await structureService.deleteFloor(req.user.societyId, blockId, floorId);
+    
+    return sendSuccess(
+      res, 
+      200, 
+      `Floor ${data.floorNumber} deleted from block '${data.blockName}' successfully.`
+    );
+  } catch (error) {
+    if (error.status) {
+      return sendError(res, error.status, error.message);
+    }
+    next(error);
+  }
+};
+
+export const deleteUnit = async (req, res, next) => {
+  try {
+    const { unitId } = req.params;
+    const data = await structureService.deleteUnit(req.user.societyId, unitId);
+    
+    return sendSuccess(
+      res, 
+      200, 
+      `Unit '${data.displayLabel}' deleted successfully.`
+    );
+  } catch (error) {
+    if (error.status) {
+      return sendError(res, error.status, error.message);
+    }
+    next(error);
+  }
+};
+
+export const editUnit = async (req, res, next) => {
+  try {
+    const { unitId } = req.params;
+    const data = await structureService.editUnit(req.user.societyId, unitId, req.body);
+    
+    return sendSuccess(
+      res, 
+      200, 
+      `Unit '${data.displayLabel}' updated successfully.`,
+      data
+    );
+  } catch (error) {
+    if (error.status) {
+      return sendError(res, error.status, error.message);
+    }
+    next(error);
+  }
+};
