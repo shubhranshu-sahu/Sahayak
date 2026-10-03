@@ -40,6 +40,10 @@ export const bulkAddFloors = async (societyId, blockId, total_floors) => {
     return {
       blockId: Number(blockId),
       floorsCreated: total_floors,
+      floorRange: {
+        from: startFloor,
+        to: startFloor + total_floors - 1
+      }
     };
   } catch (error) {
     await connection.rollback();
@@ -117,6 +121,7 @@ export const bulkAddUnits = async (societyId, floorId, payload) => {
     return {
       floorId: Number(floorId),
       unitsCreated,
+      unitsSkipped: (end_unit - start_unit + 1) - unitsCreated,
       exampleLabel: exampleLabel || 'N/A'
     };
   } catch (error) {

@@ -86,9 +86,9 @@ export const rejectResident = async (societyId, residentId) => {
 
     const unitId = residents[0].unit_id;
 
-    // Update user status to rejected
+    // Update user status to rejected and clear unit reference
     await connection.execute(
-      'UPDATE users SET status = ? WHERE id = ?',
+      'UPDATE users SET status = ?, unit_id = NULL WHERE id = ?',
       ['rejected', residentId]
     );
 
