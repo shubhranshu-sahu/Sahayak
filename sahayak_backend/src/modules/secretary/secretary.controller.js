@@ -66,3 +66,53 @@ export const getActiveResidents = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * POST /api/v1/secretary/residents/:residentId/revoke
+ * Revoke an approved resident's access and release their unit
+ */
+export const revokeResident = async (req, res, next) => {
+  try {
+    const { residentId } = req.params;
+    await secretaryService.revokeResident(req.user.societyId, residentId);
+    return sendSuccess(res, 200, 'Resident access revoked and unit released to vacant.');
+  } catch (error) {
+    if (error.status) {
+      return sendError(res, error.status, error.message);
+    }
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/secretary/residents/all
+ * List ALL residents in the society, optionally filtered by status
+ */
+export const getAllResidents = async (req, res, next) => {
+  try {
+    const { status } = req.query;
+    const data = await secretaryService.getAllResidents(req.user.societyId, status);
+    return sendSuccess(res, 200, 'Residents retrieved', data);
+  } catch (error) {
+    if (error.status) {
+      return sendError(res, error.status, error.message);
+    }
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/secretary/dashboard/stats
+ * Retrieve dashboard statistics (structure & residents overview)
+ */
+export const getDashboardStats = async (req, res, next) => {
+  try {
+    const data = await secretaryService.getDashboardStats(req.user.societyId);
+    return sendSuccess(res, 200, 'Dashboard statistics retrieved', data);
+  } catch (error) {
+    if (error.status) {
+      return sendError(res, error.status, error.message);
+    }
+    next(error);
+  }
+};
