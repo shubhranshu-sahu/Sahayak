@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resident Portal — Sahayak</title>
+    <meta name="description" content="Resident Portal for flat details, society guidelines, and AI assistance.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/cursor.css">
+</head>
+
+<body>
+    <!-- App Layout -->
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside id="app-sidebar"></aside>
+
+        <!-- Main Workspace -->
+        <main class="main-workspace">
+            <!-- Topbar -->
+            <header id="app-topbar"></header>
+
+            <!-- Page Body -->
+            <div class="content-body" id="resident-dashboard-content">
+                <!-- Skeleton Placeholder (Shown during initial data load) -->
+                <div id="resident-skeleton" class="skeleton-screen-wrapper">
+                    <div class="skeleton skeleton-banner"></div>
+                    <div class="stats-grid" style="margin-bottom: var(--sp-6);">
+                        <div class="skeleton skeleton-stat"></div>
+                        <div class="skeleton skeleton-stat"></div>
+                        <div class="skeleton skeleton-stat"></div>
+                        <div class="skeleton skeleton-stat"></div>
+                    </div>
+                    <div class="dashboard-grid">
+                        <div class="skeleton skeleton-panel"></div>
+                        <div class="skeleton skeleton-panel"></div>
+                    </div>
+                </div>
+
+                <!-- Real Resident Content (Revealed once loaded) -->
+                <div id="resident-main-view" style="display: none;">
+                    <!-- Welcome Banner -->
+                    <div class="welcome-banner" style="background: linear-gradient(135deg, #320C1C 0%, #4D122A 50%, #200511 100%);">
+                        <div class="welcome-content">
+                            <div class="welcome-tag" style="background: rgba(242, 212, 184, 0.15); color: var(--clr-accent);">
+                                <i data-lucide="home"></i>
+                                <span>Verified Resident Home</span>
+                            </div>
+                            <h2>Welcome home, <span id="banner-resident-name">Resident</span> 👋</h2>
+                            <p id="banner-resident-desc">You are connected to <strong id="banner-society-name" style="color: #FFFFFF;">Sunrise Apartments</strong>. Access your flat details, community guidelines, or ask Sahayak AI for quick assistance.</p>
+                            
+                            <div class="welcome-actions">
+                                <div class="resident-flat-badge">
+                                    <i data-lucide="key"></i>
+                                    <span id="badge-flat-number">Flat --</span>
+                                    <span class="badge-separator">·</span>
+                                    <span id="badge-block-floor">Block -- · Floor --</span>
+                                </div>
+                                <a href="chat.html" class="btn-banner-secondary">
+                                    <i data-lucide="bot"></i>
+                                    <span>Ask Sahayak AI</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4 Top Metric Cards -->
+                    <div class="stats-grid">
+                        <!-- My Residence -->
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <span class="stat-card-title">My Flat</span>
+                                <div class="stat-icon primary">
+                                    <i data-lucide="home"></i>
+                                </div>
+                            </div>
+                            <div class="stat-card-value" id="card-unit-label">--</div>
+                            <div class="stat-card-footer">
+                                <span class="stat-badge positive" id="card-unit-status">Verified Active</span>
+                                <span id="card-unit-block">Block --</span>
+                            </div>
+                        </div>
+
+                        <!-- Society Code -->
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <span class="stat-card-title">Society</span>
+                                <div class="stat-icon success">
+                                    <i data-lucide="building-2"></i>
+                                </div>
+                            </div>
+                            <div class="stat-card-value" id="card-society-code" style="font-size: var(--fs-lg); font-family: monospace;">--</div>
+                            <div class="stat-card-footer">
+                                <span class="stat-badge positive">Active Community</span>
+                            </div>
+                        </div>
+
+                        <!-- Maintenance & Helpdesk -->
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <span class="stat-card-title">Helpdesk Tickets</span>
+                                <div class="stat-icon warning">
+                                    <i data-lucide="clipboard-list"></i>
+                                </div>
+                            </div>
+                            <div class="stat-card-value">0 Open</div>
+                            <div class="stat-card-footer">
+                                <span class="stat-badge amber">All Clear</span>
+                                <span>No active issues</span>
+                            </div>
+                        </div>
+
+                        <!-- AI Concierge -->
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <span class="stat-card-title">Sahayak AI</span>
+                                <div class="stat-icon accent">
+                                    <i data-lucide="cpu"></i>
+                                </div>
+                            </div>
+                            <div class="stat-card-value">Online</div>
+                            <div class="stat-card-footer">
+                                <span class="stat-badge positive">Ready</span>
+                                <span>Answers in seconds</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Two-Column Grid -->
+                    <div class="dashboard-grid">
+                        <!-- Left Column: Unit Profile & Society Details -->
+                        <div class="dashboard-left">
+                            <!-- Residence Details Card -->
+                            <div class="panel-card">
+                                <div class="panel-header">
+                                    <h3 class="panel-title">
+                                        <i data-lucide="map-pin" style="color: var(--clr-primary);"></i>
+                                        Unit Allocation Details
+                                    </h3>
+                                </div>
+                                <div class="panel-body">
+                                    <div class="resident-profile-grid">
+                                        <div class="profile-info-item">
+                                            <span class="info-label">Flat / Unit Number</span>
+                                            <span class="info-value" id="info-unit-label">--</span>
+                                        </div>
+                                        <div class="profile-info-item">
+                                            <span class="info-label">Building Block</span>
+                                            <span class="info-value" id="info-block-name">--</span>
+                                        </div>
+                                        <div class="profile-info-item">
+                                            <span class="info-label">Floor Level</span>
+                                            <span class="info-value" id="info-floor-number">--</span>
+                                        </div>
+                                        <div class="profile-info-item">
+                                            <span class="info-label">Occupancy Status</span>
+                                            <span class="status-pill status-pill-active" style="width: fit-content;">
+                                                <span class="pulse-dot green"></span>
+                                                Occupied / Verified
+                                            </span>
+                                        </div>
+                                        <div class="profile-info-item">
+                                            <span class="info-label">Registered Phone</span>
+                                            <span class="info-value" id="info-user-phone">--</span>
+                                        </div>
+                                        <div class="profile-info-item">
+                                            <span class="info-label">Registered Email</span>
+                                            <span class="info-value" id="info-user-email">--</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Society Info Card -->
+                            <div class="panel-card">
+                                <div class="panel-header">
+                                    <h3 class="panel-title">
+                                        <i data-lucide="building" style="color: var(--clr-primary);"></i>
+                                        Society Community Information
+                                    </h3>
+                                </div>
+                                <div class="panel-body">
+                                    <div style="display: flex; flex-direction: column; gap: var(--sp-4);">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div>
+                                                <h4 id="soc-display-name" style="font-size: var(--fs-md); font-weight: 700; color: var(--clr-text-primary);">--</h4>
+                                                <span id="soc-display-location" style="font-size: var(--fs-xs); color: var(--clr-text-secondary);">--</span>
+                                            </div>
+                                            <button type="button" class="btn-copy-contact" id="btn-copy-code" title="Copy Society Code">
+                                                <i data-lucide="copy"></i>
+                                                <span id="btn-copy-code-text">Copy Code</span>
+                                            </button>
+                                        </div>
+
+                                        <div class="community-rules-strip">
+                                            <i data-lucide="info" style="color: var(--clr-primary); width: 18px; flex-shrink: 0;"></i>
+                                            <p style="font-size: var(--fs-xs); color: var(--clr-text-secondary); margin: 0; line-height: 1.5;">
+                                                Please adhere to society guidelines regarding quiet hours (10:00 PM – 7:00 AM) and visitor vehicle registration at the security gate.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Sahayak AI & Community Helpdesk -->
+                        <div class="dashboard-right">
+                            <!-- Sahayak AI Concierge for Residents -->
+                            <div class="panel-card ai-widget">
+                                <div class="panel-header">
+                                    <h3 class="panel-title">
+                                        <i data-lucide="bot" style="color: #A044FF;"></i>
+                                        Sahayak Resident AI Concierge
+                                    </h3>
+                                    <span class="ai-badge">Agent Active</span>
+                                </div>
+                                <div class="panel-body">
+                                    <p style="font-size: var(--fs-xs); color: var(--clr-text-secondary); margin-bottom: var(--sp-4);">
+                                        Ask Sahayak AI any question regarding society rules, amenities, or maintenance:
+                                    </p>
+
+                                    <div class="ai-prompt-chips">
+                                        <div class="prompt-chip" data-prompt="What are the visitor parking guidelines and overnight guest vehicle rules?">
+                                            <span>🚗 Visitor parking guidelines</span>
+                                            <i data-lucide="chevron-right" style="width: 14px;"></i>
+                                        </div>
+                                        <div class="prompt-chip" data-prompt="What are the society clubhouse and gymnasium operating timings?">
+                                            <span>🏋️ Gymnasium & clubhouse timings</span>
+                                            <i data-lucide="chevron-right" style="width: 14px;"></i>
+                                        </div>
+                                        <div class="prompt-chip" data-prompt="How do I raise a complaint for water leakage or plumbing maintenance?">
+                                            <span>🔧 How to report a plumbing complaint</span>
+                                            <i data-lucide="chevron-right" style="width: 14px;"></i>
+                                        </div>
+                                    </div>
+
+                                    <form id="resident-ai-form" class="ai-input-bar">
+                                        <input type="text" class="ai-input-field" id="resident-ai-input" placeholder="Ask AI about society guidelines...">
+                                        <button type="submit" class="btn-ai-send" aria-label="Ask AI">
+                                            <i data-lucide="send" style="width: 16px;"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Phase 2 Helpdesk Quick Action -->
+                            <div class="panel-card">
+                                <div class="panel-header">
+                                    <h3 class="panel-title">
+                                        <i data-lucide="alert-circle" style="color: var(--clr-text-secondary);"></i>
+                                        Lodge a Concern / Request
+                                    </h3>
+                                    <span class="stat-badge amber">Phase 2</span>
+                                </div>
+                                <div class="panel-body">
+                                    <p style="font-size: var(--fs-xs); color: var(--clr-text-secondary); margin-bottom: var(--sp-4);">
+                                        Have an issue with electricals, plumbing, cleanliness, or parking in your block? You can draft concerns directly to the RWA committee:
+                                    </p>
+                                    <button type="button" class="btn-banner-primary" id="btn-lodge-complaint" style="width: 100%; justify-content: center;">
+                                        <i data-lucide="plus-circle"></i>
+                                        <span>Raise a Maintenance Request</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="../config.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/router.js"></script>
+    <script src="../js/components.js"></script>
+    <script src="../js/cursor.js"></script>
+    <script src="../js/animations.js"></script>
+    <script src="../js/pages/resident-dashboard.js"></script>
+</body>
+
+</html>

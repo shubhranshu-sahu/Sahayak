@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sahayak AI Assistant — Society Co-Pilot</title>
+    <meta name="description" content="Intelligent AI Co-Pilot for society secretaries powered by Gemini and LangGraph.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/chat.css">
+    <link rel="stylesheet" href="../css/cursor.css">
+</head>
+
+<body>
+    <!-- App Layout -->
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside id="app-sidebar"></aside>
+
+        <!-- Main Workspace -->
+        <main class="main-workspace">
+            <!-- Topbar -->
+            <header id="app-topbar"></header>
+
+            <!-- Page Body -->
+            <div class="content-body" style="padding-top: var(--sp-4); padding-bottom: var(--sp-4);">
+                <!-- Skeleton Placeholder (Shown during initial data load) -->
+                <div id="chat-skeleton" class="skeleton-screen-wrapper">
+                    <div class="skeleton skeleton-banner" style="height: 60px;"></div>
+                    <div class="skeleton skeleton-panel" style="height: calc(100vh - 220px);"></div>
+                </div>
+
+                <!-- Resident Restricted Access Notice (if a resident tries to open) -->
+                <div id="resident-restricted-card" class="panel-card" style="display: none; max-width: 600px; margin: var(--sp-12) auto; text-align: center; padding: var(--sp-10) var(--sp-6);">
+                    <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(92, 26, 51, 0.1); color: var(--clr-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--sp-4);">
+                        <i data-lucide="shield-alert" style="width: 32px; height: 32px;"></i>
+                    </div>
+                    <h3 style="font-size: var(--fs-xl); font-family: var(--ff-heading); color: var(--clr-primary-dark); margin-bottom: var(--sp-2);">Secretary Access Required</h3>
+                    <p style="color: var(--clr-text-secondary); max-width: 440px; margin: 0 auto var(--sp-6); line-height: 1.6;">
+                        Sahayak AI Assistant is configured as an administrative co-pilot for verified society secretaries. Resident assistance features will be available in an upcoming release.
+                    </p>
+                    <a href="resident-dashboard.html" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+                        <i data-lucide="arrow-left"></i>
+                        <span>Return to Resident Dashboard</span>
+                    </a>
+                </div>
+
+                <!-- Real Chat Workspace -->
+                <div id="chat-workspace-main" class="chat-workspace" style="display: none;">
+                    <!-- Chat Sub-Header / Control Bar -->
+                    <div class="chat-header-bar">
+                        <div class="chat-header-left">
+                            <!-- Service Status Pill -->
+                            <div class="ai-status-pill online" id="ai-status-pill">
+                                <span class="ai-status-dot"></span>
+                                <span id="ai-status-text">AI Core Ready</span>
+                            </div>
+
+                            <!-- Model Tag -->
+                            <div class="model-tag">
+                                <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i>
+                                <span id="ai-model-name">Gemini 3.8 Flash</span>
+                            </div>
+
+                            <!-- Society Context -->
+                            <div class="society-context-badge">
+                                <i data-lucide="building" style="width: 13px; height: 13px; color: var(--clr-primary);"></i>
+                                <span id="chat-society-name">Society Context</span>
+                            </div>
+                        </div>
+
+                        <div class="chat-header-actions">
+                            <button type="button" class="btn-chat-action" id="btn-refresh-history" title="Reload saved conversation from MongoDB">
+                                <i data-lucide="rotate-cw" id="icon-refresh-history" style="width: 14px; height: 14px;"></i>
+                                <span>Reload</span>
+                            </button>
+                            <button type="button" class="btn-chat-action" id="btn-clear-chat" title="Clear current view">
+                                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                                <span>Clear</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Service Offline Notice Banner (Dynamic) -->
+                    <div id="ai-offline-banner" class="ai-service-offline-banner">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <i data-lucide="alert-circle" style="color: #F57F17; width: 18px; height: 18px; flex-shrink: 0;"></i>
+                            <span>
+                                <strong>AI Service is Offline:</strong> Python FastAPI server not responding at <code>http://localhost:8001</code>. Start it with <code>uvicorn app.main:app --port 8001 --reload</code> in the <code>ai-service/</code> directory.
+                            </span>
+                        </div>
+                        <button type="button" class="btn-chat-action" id="btn-retry-connection" style="background: #FFFFFF; font-size: 11px;">
+                            Retry Connection
+                        </button>
+                    </div>
+
+                    <!-- Scrollable Messages Container -->
+                    <div id="chat-messages-list" class="chat-messages-container">
+                        <!-- Welcome / Empty State (shown when no messages) -->
+                        <div id="chat-welcome-state" class="chat-welcome-state">
+                            <div class="welcome-avatar-wrapper">
+                                <div class="welcome-avatar-pulse"></div>
+                                <div class="welcome-avatar">
+                                    <i data-lucide="bot"></i>
+                                </div>
+                            </div>
+                            <h3 class="welcome-title" id="welcome-secretary-heading">Hello, Secretary! I'm your Sahayak AI Co-Pilot</h3>
+                            <p class="welcome-subtitle">
+                                Powered by Google Gemini and persistent LangGraph state. Ask for guidance on society bylaws, draft official circulars, handle resident requests, or generate meeting agendas.
+                            </p>
+
+                            <!-- Suggestion Chips Grid -->
+                            <div class="welcome-suggestions-grid">
+                                <div class="suggestion-card" data-prompt="Draft an urgent notice for residents regarding scheduled water tank cleaning tomorrow from 10 AM to 3 PM.">
+                                    <div class="suggestion-icon">
+                                        <i data-lucide="droplet" style="width: 18px; height: 18px;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="suggestion-title">Draft Water Maintenance Notice</div>
+                                        <div class="suggestion-desc">Generate professional notice with date, timing, and resident instructions.</div>
+                                    </div>
+                                </div>
+
+                                <div class="suggestion-card" data-prompt="What are the standard model bye-laws and regulations regarding late maintenance fee penalties in housing societies?">
+                                    <div class="suggestion-icon">
+                                        <i data-lucide="scale" style="width: 18px; height: 18px;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="suggestion-title">Late Fee Penalty Rules</div>
+                                        <div class="suggestion-desc">Consult standard legal bylaws and recommended interest slabs.</div>
+                                    </div>
+                                </div>
+
+                                <div class="suggestion-card" data-prompt="Create a structured agenda template for our upcoming Annual General Meeting (AGM) covering budget approvals and security upgrades.">
+                                    <div class="suggestion-icon">
+                                        <i data-lucide="calendar" style="width: 18px; height: 18px;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="suggestion-title">AGM Meeting Agenda</div>
+                                        <div class="suggestion-desc">Comprehensive order of business including budget and society audits.</div>
+                                    </div>
+                                </div>
+
+                                <div class="suggestion-card" data-prompt="How should a society secretary politely mediate a noise complaint between neighboring flats without escalating tension?">
+                                    <div class="suggestion-icon">
+                                        <i data-lucide="heart-handshake" style="width: 18px; height: 18px;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="suggestion-title">Mediate Neighbor Disputes</div>
+                                        <div class="suggestion-desc">Diplomatic resolution steps and communication guidelines.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic message rows will be inserted here -->
+                    </div>
+
+                    <!-- Scroll to bottom button -->
+                    <button type="button" id="btn-scroll-bottom" class="btn-scroll-bottom" title="Scroll to latest message">
+                        <i data-lucide="chevron-down" style="width: 18px; height: 18px;"></i>
+                    </button>
+
+                    <!-- Sticky Bottom Input Area -->
+                    <div class="chat-input-wrapper">
+                        <form id="chat-form" class="chat-input-form">
+                            <textarea
+                                id="chat-prompt-input"
+                                class="chat-textarea"
+                                placeholder="Message Sahayak AI (e.g. 'Draft maintenance notice', 'Explain bylaws')..."
+                                rows="1"
+                                autocomplete="off"
+                            ></textarea>
+
+                            <div class="chat-input-controls">
+                                <div class="chat-input-hints">
+                                    <i data-lucide="command" style="width: 12px; height: 12px;"></i>
+                                    <span>Press <strong>Enter</strong> to send · <strong>Shift + Enter</strong> for new line</span>
+                                </div>
+
+                                <div class="chat-input-buttons">
+                                    <button type="button" id="btn-stop-generation" class="btn-stop-stream">
+                                        <i data-lucide="square" style="width: 12px; height: 12px; fill: currentColor;"></i>
+                                        <span>Stop</span>
+                                    </button>
+
+                                    <button type="submit" id="btn-send-chat" class="btn-send-message" disabled title="Send message">
+                                        <i data-lucide="arrow-up" style="width: 18px; height: 18px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <div class="chat-disclaimer">
+                            Sahayak AI co-pilot assists with housing society administration. Always review important notices and financial decisions.
+                        </div>
+                    </div>
+                </div> <!-- End #chat-workspace-main -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Clear Chat Confirmation Modal -->
+    <div id="clear-confirm-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon-badge danger">
+                    <i data-lucide="trash-2"></i>
+                </div>
+                <div>
+                    <h3 class="modal-title">Clear Chat Window</h3>
+                    <p class="modal-subtitle">Clear conversation from current screen</p>
+                </div>
+                <button type="button" class="btn-modal-close" id="btn-close-clear-modal" aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <p>Are you sure you want to clear the messages currently on screen?</p>
+                <div class="modal-unit-warning" style="margin-top: var(--sp-3);">
+                    <i data-lucide="info" style="color: var(--clr-primary); width: 18px; flex-shrink: 0;"></i>
+                    <div>
+                        Your conversation history remains permanently saved in the database. You can reload it anytime by clicking <strong>Reload</strong> in the top bar.
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="btn-cancel-clear">Cancel</button>
+                <button type="button" class="btn-danger" id="btn-confirm-clear">
+                    <span>Clear Messages</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+    <script src="../config.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/router.js"></script>
+    <script src="../js/components.js"></script>
+    <script src="../js/cursor.js"></script>
+    <script src="../js/animations.js"></script>
+    <script src="../js/pages/chat.js"></script>
+</body>
+
+</html>
