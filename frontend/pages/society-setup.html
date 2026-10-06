@@ -91,7 +91,11 @@
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label" for="soc-code">Society Code (e.g. SUNRISE-DEL, A-Z and hyphens only)</label>
-                                        <input type="text" class="form-input" id="soc-code" placeholder="e.g. SUNRISE-DEL" style="text-transform: uppercase;" required>
+                                        <div style="position: relative;">
+                                            <input type="text" class="form-input" id="soc-code" placeholder="e.g. SUNRISE-DEL" style="text-transform: uppercase; padding-right: 40px;" required>
+                                            <div id="soc-code-spinner" class="spinner" style="display: none; position: absolute; right: 14px; top: 14px; width: 16px; height: 16px; border: 2px solid rgba(92,26,51,0.2); border-top-color: var(--clr-primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                                        </div>
+                                        <div id="soc-code-feedback" class="validation-feedback" style="min-height: 20px; margin-top: 5px;"></div>
                                     </div>
                                 </div>
 
@@ -309,6 +313,182 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- ══════════ Modals ══════════ -->
+    <!-- Rename Block Modal -->
+    <div id="rename-block-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon-badge" style="background: rgba(92, 26, 51, 0.1); color: var(--clr-primary);">
+                    <i data-lucide="edit-3"></i>
+                </div>
+                <div>
+                    <h3 class="modal-title">Rename Block</h3>
+                    <p class="modal-subtitle">Update block identifier across all floors and units</p>
+                </div>
+                <button type="button" class="btn-modal-close" id="btn-close-rename-block-modal" aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <form id="form-rename-block">
+                <div class="modal-body">
+                    <input type="hidden" id="rename-block-id">
+                    <div class="form-group">
+                        <label class="form-label" for="rename-block-input">New Block Name / Letter</label>
+                        <input type="text" class="form-input" id="rename-block-input" placeholder="e.g. B" maxlength="2" style="text-transform: uppercase;" required>
+                    </div>
+                    <div class="modal-unit-warning" style="background: #E8F5E9; border-color: #A5D6A7; color: #1B5E20;">
+                        <i data-lucide="info" style="color: #2E7D32; width: 18px; flex-shrink: 0;"></i>
+                        <div>
+                            <strong>Automatic Unit Label Sync:</strong> Renaming this block updates all unit numbers dynamically (e.g., A-101 becomes B-101).
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="btn-cancel-rename-block">Cancel</button>
+                    <button type="submit" class="btn-quick-action" id="btn-submit-rename-block">
+                        <span class="btn-text">Save Changes</span>
+                        <div class="btn-loader"></div>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Block Modal -->
+    <div id="delete-block-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon-badge danger">
+                    <i data-lucide="trash-2"></i>
+                </div>
+                <div>
+                    <h3 class="modal-title">Delete Block</h3>
+                    <p class="modal-subtitle">Permanently delete block from society</p>
+                </div>
+                <button type="button" class="btn-modal-close" id="btn-close-delete-block-modal" aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="delete-block-id">
+                <p>Are you sure you want to delete <strong id="delete-block-label" style="color: var(--clr-primary);">Block</strong>?</p>
+                <div class="modal-unit-warning">
+                    <i data-lucide="alert-triangle" style="color: #D32F2F; width: 18px; flex-shrink: 0;"></i>
+                    <div>
+                        <strong>Floor Guard:</strong> Blocks can only be deleted if they contain <strong>0 floors</strong>. If this block has floors, remove its floors first.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="btn-cancel-delete-block">Cancel</button>
+                <button type="button" class="btn-danger" id="btn-confirm-delete-block">
+                    <span class="btn-text">Delete Block</span>
+                    <div class="btn-loader"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Floor Modal -->
+    <div id="delete-floor-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon-badge danger">
+                    <i data-lucide="trash-2"></i>
+                </div>
+                <div>
+                    <h3 class="modal-title">Delete Floor</h3>
+                    <p class="modal-subtitle">Permanently delete floor from block</p>
+                </div>
+                <button type="button" class="btn-modal-close" id="btn-close-delete-floor-modal" aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="delete-floor-block-id">
+                <input type="hidden" id="delete-floor-id">
+                <p>Are you sure you want to delete <strong id="delete-floor-label" style="color: var(--clr-primary);">Floor</strong>?</p>
+                <div class="modal-unit-warning">
+                    <i data-lucide="alert-triangle" style="color: #D32F2F; width: 18px; flex-shrink: 0;"></i>
+                    <div>
+                        <strong>Unit Guard:</strong> Floors can only be deleted if they contain <strong>0 units</strong>. If this floor has units, delete them first.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="btn-cancel-delete-floor">Cancel</button>
+                <button type="button" class="btn-danger" id="btn-confirm-delete-floor">
+                    <span class="btn-text">Delete Floor</span>
+                    <div class="btn-loader"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Unit Edit / Delete Modal -->
+    <div id="unit-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon-badge" style="background: rgba(92, 26, 51, 0.1); color: var(--clr-primary);">
+                    <i data-lucide="home"></i>
+                </div>
+                <div>
+                    <h3 class="modal-title" id="unit-modal-title">Unit Details</h3>
+                    <p class="modal-subtitle" id="unit-modal-subtitle">Manage unit configuration or status</p>
+                </div>
+                <button type="button" class="btn-modal-close" id="btn-close-unit-modal" aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <form id="form-edit-unit">
+                <div class="modal-body">
+                    <input type="hidden" id="edit-unit-id">
+                    <div class="wizard-form-grid" style="margin-bottom: var(--sp-4);">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" for="edit-unit-type">Unit Type</label>
+                            <select class="form-input" id="edit-unit-type" required>
+                                <option value="apartment">Apartment</option>
+                                <option value="villa">Villa</option>
+                                <option value="row_house">Row House</option>
+                                <option value="plot">Plot</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" for="edit-unit-area">Area (Sqft)</label>
+                            <input type="number" class="form-input" id="edit-unit-area" min="100" max="20000" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="edit-unit-status">Status</label>
+                        <select class="form-input" id="edit-unit-status" required>
+                            <option value="vacant">Vacant</option>
+                            <option value="occupied">Occupied</option>
+                        </select>
+                    </div>
+                    <div class="modal-unit-warning" id="unit-delete-warning">
+                        <i data-lucide="info" style="color: #D32F2F; width: 18px; flex-shrink: 0;"></i>
+                        <div>
+                            <strong>Occupancy Guard:</strong> Units with pending or approved resident applications cannot be deleted.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="display: flex; justify-content: space-between;">
+                    <button type="button" class="btn-danger" id="btn-delete-unit" style="background: transparent; color: #D32F2F; border: 1px solid #D32F2F; display: inline-flex; align-items: center; gap: 6px;">
+                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                        <span>Delete Unit</span>
+                    </button>
+                    <div style="display: flex; gap: var(--sp-2);">
+                        <button type="button" class="btn-secondary" id="btn-cancel-unit">Cancel</button>
+                        <button type="submit" class="btn-quick-action" id="btn-save-unit">
+                            <span class="btn-text">Save Changes</span>
+                            <div class="btn-loader"></div>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Scripts -->

@@ -73,11 +73,41 @@ async function loadDashboardData(user) {
     let totalUnits = 0;
     let occupiedUnits = 0;
     let vacantUnits = 0;
+    let occupancyRate = 0;
+    let totalBlocks = 0;
+    let totalFloors = 0;
 
-    // Try fetching Pending Residents
+    // 1. Fetch Fast Dashboard Stats from dedicated Phase 1B API
+    try {
+        const statsRes = await Api.getDashboardStats();
+        if (statsRes.success && statsRes.data) {
+            const data = statsRes.data;
+            const struct = data.structure || {};
+            const resData = data.residents || {};
+
+            totalUnits = struct.totalUnits || 0;
+            occupiedUnits = struct.occupiedUnits || 0;
+            vacantUnits = struct.vacantUnits || 0;
+            occupancyRate = struct.occupancyRate !== undefined ? struct.occupancyRate : 0;
+            totalBlocks = struct.totalBlocks || 0;
+            totalFloors = struct.totalFloors || 0;
+
+            activeCount = resData.active || 0;
+            pendingCount = resData.pending || 0;
+
+            if (Array.isArray(data.recentRegistrations)) {
+                renderRecentRegistrations(data.recentRegistrations);
+            }
+        }
+    } catch (err) {
+        console.warn('[Dashboard] Could not fetch stats from /dashboard/stats:', err);
+    }
+
+    // 2. Fetch Pending Residents Queue for interactive action buttons
     try {
         const pendingRes = await Api.get('/secretary/residents/pending');
         if (pendingRes.success && Array.isArray(pendingRes.data)) {
+            // Keep pendingCount aligned if returned
             pendingCount = pendingRes.data.length;
             renderPendingResidents(pendingRes.data);
         } else {
@@ -87,21 +117,11 @@ async function loadDashboardData(user) {
         renderEmptyPending();
     }
 
-    // Try fetching Society Structure
+    // 3. Fetch Society Structure Overview for Block visualization
     try {
         const structRes = await Api.get('/society/structure');
         if (structRes.success && structRes.data && Array.isArray(structRes.data.blocks)) {
-            const blocks = structRes.data.blocks;
-            blocks.forEach(b => {
-                (b.floors || []).forEach(f => {
-                    (f.units || []).forEach(u => {
-                        totalUnits++;
-                        if (u.status === 'occupied') occupiedUnits++;
-                        else vacantUnits++;
-                    });
-                });
-            });
-            renderStructureOverview(blocks);
+            renderStructureOverview(structRes.data.blocks);
         } else {
             renderEmptyStructure();
         }
@@ -109,17 +129,7 @@ async function loadDashboardData(user) {
         renderEmptyStructure();
     }
 
-    // Try fetching Active Residents
-    try {
-        const activeRes = await Api.get('/secretary/residents');
-        if (activeRes.success && Array.isArray(activeRes.data)) {
-            activeCount = activeRes.data.length;
-        }
-    } catch {
-        activeCount = 0;
-    }
-
-    // Update stats cards
+    // 4. Update Stats UI Cards
     const totalEl = document.getElementById('stat-total-units');
     if (totalEl) totalEl.textContent = totalUnits > 0 ? totalUnits : '0';
 
@@ -135,12 +145,77 @@ async function loadDashboardData(user) {
     const pendEl = document.getElementById('stat-pending-approvals');
     if (pendEl) pendEl.textContent = pendingCount;
 
+    const pendBadge = document.getElementById('stat-pending-badge');
+    if (pendBadge) {
+        pendBadge.textContent = pendingCount > 0 ? `${pendingCount} Needs Review` : 'All Clear';
+        pendBadge.className = `stat-badge ${pendingCount > 0 ? 'amber' : 'positive'}`;
+    }
+
+    const occRateEl = document.getElementById('stat-occupancy-rate');
+    if (occRateEl) occRateEl.textContent = `${occupancyRate}%`;
+
+    const occRateBadge = document.getElementById('stat-occupancy-badge');
+    if (occRateBadge) {
+        occRateBadge.textContent = occupancyRate >= 70 ? 'High Occupancy' : occupancyRate >= 40 ? 'Moderate' : 'Available';
+    }
+
+    const blocksFloorsEl = document.getElementById('stat-blocks-floors');
+    if (blocksFloorsEl) blocksFloorsEl.textContent = `· ${totalBlocks} Blocks · ${totalFloors} Floors`;
+
     // Update pending badge in sidebar if pending > 0
     const sidebarPendingBadge = document.getElementById('sidebar-pending-badge');
-    if (sidebarPendingBadge && pendingCount > 0) {
-        sidebarPendingBadge.textContent = pendingCount;
-        sidebarPendingBadge.style.display = 'inline-block';
+    if (sidebarPendingBadge) {
+        if (pendingCount > 0) {
+            sidebarPendingBadge.textContent = pendingCount;
+            sidebarPendingBadge.style.display = 'inline-block';
+        } else {
+            sidebarPendingBadge.style.display = 'none';
+        }
     }
+}
+
+function renderRecentRegistrations(registrations) {
+    const container = document.getElementById('recent-registrations-container');
+    if (!container) return;
+
+    if (!registrations || registrations.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state" style="padding: var(--sp-4);">
+                <p style="font-size: var(--fs-xs); color: var(--clr-text-secondary); margin: 0;">No resident signups yet.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <ul style="list-style: none; display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-xs); padding: 0; margin: 0;">
+            ${registrations.map(r => {
+                const initial = (r.name || 'R').charAt(0).toUpperCase();
+                const unitText = r.unitLabel || 'Flat Pending';
+                const statusColor = r.status === 'active' ? '#2E7D32' : r.status === 'pending' ? '#E65100' : r.status === 'rejected' ? '#C62828' : '#546E7A';
+                const statusBg = r.status === 'active' ? '#E8F5E9' : r.status === 'pending' ? '#FFF3E0' : r.status === 'rejected' ? '#FFEBEE' : '#ECEFF1';
+                const dateText = r.registeredAt ? (Utils && Utils.formatDate ? Utils.formatDate(r.registeredAt) : new Date(r.registeredAt).toLocaleDateString()) : 'Recent';
+
+                return `
+                    <li style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--clr-border);">
+                        <div style="display: flex; gap: var(--sp-3); align-items: center;">
+                            <div style="width: 30px; height: 30px; border-radius: 50%; background: var(--clr-surface-dim); border: 1px solid var(--clr-border); color: var(--clr-primary); display: flex; align-items: center; justify-content: center; font-weight: 700;">
+                                ${initial}
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; color: var(--clr-text-primary);">${r.name}</div>
+                                <div style="color: var(--clr-text-secondary); font-size: 11px;">Flat ${unitText} · ${dateText}</div>
+                            </div>
+                        </div>
+                        <span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: ${statusBg}; color: ${statusColor}; text-transform: capitalize;">
+                            ${r.status}
+                        </span>
+                    </li>
+                `;
+            }).join('')}
+        </ul>
+    `;
+    if (window.lucide) lucide.createIcons({ nodes: [container] });
 }
 
 function renderPendingResidents(residents) {
