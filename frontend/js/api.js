@@ -195,5 +195,63 @@ const Api = (() => {
         }
     }
 
-    return { request, get, post, put, patch, del, aiGet, aiPost, aiStreamChat };
+    /* ── Phase 1B Domain Helpers ── */
+    function getDashboardStats() {
+        return get('/secretary/dashboard/stats');
+    }
+
+    function getAllResidents(status = '') {
+        const query = status ? `?status=${encodeURIComponent(status)}` : '';
+        return get(`/secretary/residents/all${query}`);
+    }
+
+    function revokeResident(residentId) {
+        return post(`/secretary/residents/${residentId}/revoke`);
+    }
+
+    function validateSocietyCode(code) {
+        return get(`/public/validate-code/${encodeURIComponent(code)}`);
+    }
+
+    function renameBlock(blockId, block_name) {
+        return put(`/society/blocks/${blockId}`, { block_name });
+    }
+
+    function deleteBlock(blockId) {
+        return del(`/society/blocks/${blockId}`);
+    }
+
+    function deleteFloor(blockId, floorId) {
+        return del(`/blocks/${blockId}/floors/${floorId}`);
+    }
+
+    function deleteUnit(unitId) {
+        return del(`/units/${unitId}`);
+    }
+
+    function editUnit(unitId, data) {
+        return put(`/units/${unitId}`, data);
+    }
+
+    return {
+        request,
+        get,
+        post,
+        put,
+        patch,
+        del,
+        aiGet,
+        aiPost,
+        aiStreamChat,
+        // Phase 1B additions
+        getDashboardStats,
+        getAllResidents,
+        revokeResident,
+        validateSocietyCode,
+        renameBlock,
+        deleteBlock,
+        deleteFloor,
+        deleteUnit,
+        editUnit,
+    };
 })();

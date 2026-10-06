@@ -1,15 +1,17 @@
 /**
  * Sahayak — Society Setup Wizard Page Logic
  * Manages 4-step wizard:
- * 1. Society Profile (auto-populated & skipped if society already exists)
- * 2. Block Creation
- * 3. Bulk Floor & Unit Generator (with existing floor detection & append prevention)
- * 4. Visual Interactive Structure Hierarchy Tree
+ * 1. Society Profile (with live debounced society_code validation & auto-population)
+ * 2. Block Creation (with block rename & delete actions)
+ * 3. Bulk Floor & Unit Generator (with existing floor detection & unitsSkipped feedback)
+ * 4. Visual Interactive Structure Hierarchy Tree (with floor deletion & unit edit/delete modals)
  */
 
 let currentStep = 1;
 let createdBlocks = [];
 let societyData = null;
+let codeValidationTimeout = null;
+let isCodeAvailable = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Authenticate user (Secretary only)
@@ -20,15 +22,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     Components.initSidebar('society-setup');
     Components.initTopbar({
         title: 'Society Setup Wizard',
-        subtitle: 'Define your society profile and residential blocks',
+        subtitle: 'Define your society profile, blocks, floors, and residential units',
     });
 
-    // 3. Check if user already has a society
+    // 3. Setup real-time society code validator
+    setupCodeValidation();
+
+    // 4. Setup modal dialog handlers (Rename/Delete Block, Delete Floor, Edit/Delete Unit)
+    setupModals();
+
+    // 5. Check if user already has a society registered
     if (user.societyId || (user.society && user.society.id)) {
         // Fetch full society configuration
         const res = await Api.get('/society/setup');
         if (res.success && res.data) {
             societyData = res.data;
+            isCodeAvailable = true; // Already registered
             
             // Show registered banner
             const banner = document.getElementById('society-registered-banner');
@@ -49,6 +58,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 codeInput.value = societyData.society_code || societyData.societyCode || '';
                 codeInput.disabled = true;
                 codeInput.title = 'Society code is unique and cannot be modified once registered.';
+            }
+
+            const feedback = document.getElementById('soc-code-feedback');
+            if (feedback) {
+                feedback.innerHTML = `
+                    <span style="color: #2E7D32; display: inline-flex; align-items: center; gap: 4px;">
+                        <i data-lucide="check-circle-2" style="width: 13px; height: 13px;"></i>
+                        Registered society identifier (locked).
+                    </span>
+                `;
             }
 
             const addressInput = document.getElementById('soc-address');
@@ -109,6 +128,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     Toast.error('Society code must be 3-20 characters: uppercase letters A-Z and hyphens (-) only, starting with a letter.');
                     return;
                 }
+
+                // Final check if code is confirmed available
+                if (!isCodeAvailable) {
+                    const check = await Api.validateSocietyCode(society_code);
+                    if (!check.success || !check.data?.available) {
+                        Toast.error(check.data?.message || 'This society code is already in use. Please pick another.');
+                        return;
+                    }
+                    isCodeAvailable = true;
+                }
             }
 
             const submitBtn = document.getElementById('btn-submit-step1');
@@ -140,7 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (res.success && res.data) {
                 societyData = res.data;
-                Toast.success(societyData ? 'Society profile updated successfully!' : 'Society profile created successfully!');
+                Toast.success(societyData ? 'Society profile saved successfully!' : 'Society profile created successfully!');
                 await Router.validateAndGetUser();
                 Components.initSidebar('society-setup');
                 goToStep(2);
@@ -183,6 +212,91 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ══════════ Step 3: Interactive Floor/Unit Setup ══════════
     setupStep3Listeners();
 });
+
+/**
+ * Real-time debounced society code validation using GET /public/validate-code/:code
+ */
+function setupCodeValidation() {
+    const codeInput = document.getElementById('soc-code');
+    const feedback = document.getElementById('soc-code-feedback');
+    const spinner = document.getElementById('soc-code-spinner');
+    if (!codeInput || !feedback) return;
+
+    codeInput.addEventListener('input', () => {
+        if (codeInput.disabled) return;
+        clearTimeout(codeValidationTimeout);
+
+        const val = codeInput.value.trim().toUpperCase();
+        codeInput.value = val;
+
+        if (!val) {
+            feedback.innerHTML = '';
+            if (spinner) spinner.style.display = 'none';
+            isCodeAvailable = false;
+            return;
+        }
+
+        const codeRegex = /^[A-Z][A-Z-]{2,19}$/;
+        if (!codeRegex.test(val)) {
+            if (spinner) spinner.style.display = 'none';
+            feedback.innerHTML = `
+                <span style="color: #C62828; display: inline-flex; align-items: center; gap: 4px;">
+                    <i data-lucide="alert-circle" style="width: 13px; height: 13px;"></i>
+                    Must be 3-20 characters: letters A-Z & hyphens only, start with a letter.
+                </span>
+            `;
+            if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [feedback] });
+            isCodeAvailable = false;
+            return;
+        }
+
+        if (spinner) spinner.style.display = 'block';
+        feedback.innerHTML = `
+            <span style="color: var(--clr-text-secondary); display: inline-flex; align-items: center; gap: 4px;">
+                Checking availability...
+            </span>
+        `;
+
+        codeValidationTimeout = setTimeout(async () => {
+            try {
+                const res = await Api.validateSocietyCode(val);
+                if (spinner) spinner.style.display = 'none';
+
+                if (res.success && res.data) {
+                    if (res.data.available) {
+                        feedback.innerHTML = `
+                            <span style="color: #2E7D32; display: inline-flex; align-items: center; gap: 4px;">
+                                <i data-lucide="check-circle-2" style="width: 13px; height: 13px;"></i>
+                                Society code "<strong>${val}</strong>" is available!
+                            </span>
+                        `;
+                        isCodeAvailable = true;
+                    } else {
+                        feedback.innerHTML = `
+                            <span style="color: #C62828; display: inline-flex; align-items: center; gap: 4px;">
+                                <i data-lucide="x-circle" style="width: 13px; height: 13px;"></i>
+                                ${res.data.message || `Code "${val}" is already taken.`}
+                            </span>
+                        `;
+                        isCodeAvailable = false;
+                    }
+                } else {
+                    feedback.innerHTML = `
+                        <span style="color: #C62828; display: inline-flex; align-items: center; gap: 4px;">
+                            <i data-lucide="alert-circle" style="width: 13px; height: 13px;"></i>
+                            ${res.message || 'Unable to verify code availability.'}
+                        </span>
+                    `;
+                    isCodeAvailable = false;
+                }
+                if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [feedback] });
+            } catch (err) {
+                if (spinner) spinner.style.display = 'none';
+                isCodeAvailable = false;
+            }
+        }, 350);
+    });
+}
 
 /**
  * Setup Step 3 form dynamic updates and submission
@@ -276,7 +390,7 @@ function updateBlockStatusAndPreview() {
 }
 
 /**
- * Handle Step 3 submission without unwanted duplicate floor appends
+ * Handle Step 3 submission with informative unitsSkipped feedback
  */
 async function handleStep3Submit(e) {
     e.preventDefault();
@@ -332,7 +446,7 @@ async function handleStep3Submit(e) {
                 return;
             }
 
-            Toast.success(`${totalFloors} floors created! Fetching structure...`);
+            Toast.success(`${totalFloors} floors created! Fetching updated structure...`);
 
             // 2. Fetch updated structure to find the newly created floors
             const structRes = await Api.get('/society/structure');
@@ -340,28 +454,43 @@ async function handleStep3Submit(e) {
                 createdBlocks = structRes.data.blocks;
                 const updatedBlock = createdBlocks.find(b => String(b.id) === String(blockId));
                 if (updatedBlock && updatedBlock.floors) {
-                    // Filter to only new floors (or all if brand new)
                     targetFloors = updatedBlock.floors.filter(f => Number(f.floorNumber) > maxFloorBefore);
                 }
             }
         }
 
-        // 3. Populate units for the target floors
+        // 3. Populate units for the target floors and collect skipped units feedback
+        let totalUnitsCreated = 0;
+        let totalUnitsSkipped = 0;
+        const skippedUnitNumbers = [];
+
         if (targetFloors.length > 0) {
             Toast.info(`Adding units to ${targetFloors.length} floors...`);
             for (const floor of targetFloors) {
-                await Api.post(`/floors/${floor.id}/units/bulk`, {
+                const uRes = await Api.post(`/floors/${floor.id}/units/bulk`, {
                     start_unit: startUnit,
                     end_unit: endUnit,
                     unit_type: unitType,
                     area_sqft: areaSqft
                 });
+                if (uRes.success && uRes.data) {
+                    totalUnitsCreated += (uRes.data.createdCount || 0);
+                    if (Array.isArray(uRes.data.unitsSkipped) && uRes.data.unitsSkipped.length > 0) {
+                        totalUnitsSkipped += uRes.data.unitsSkipped.length;
+                        skippedUnitNumbers.push(...uRes.data.unitsSkipped);
+                    }
+                }
             }
         }
 
         // 4. Refresh structure and advance
         await loadExistingStructure();
-        Toast.success('Floors & Units successfully configured!');
+
+        if (totalUnitsSkipped > 0) {
+            Toast.warning(`${totalUnitsCreated} units created. ${totalUnitsSkipped} existing units preserved (${skippedUnitNumbers.slice(0, 4).join(', ')}${skippedUnitNumbers.length > 4 ? '...' : ''}).`);
+        } else {
+            Toast.success(`${totalUnitsCreated} units successfully configured across ${targetFloors.length} floors!`);
+        }
         goToStep(4);
     } catch (err) {
         console.error('Error in step 3:', err);
@@ -396,7 +525,9 @@ function goToStep(step) {
         }
     }
 
-    if (step === 3) {
+    if (step === 2) {
+        renderBlocksList();
+    } else if (step === 3) {
         populateBlockDropdown();
         updateBlockStatusAndPreview();
     } else if (step === 4) {
@@ -415,12 +546,18 @@ async function loadExistingStructure() {
             renderBlocksList();
             populateBlockDropdown();
             updateBlockStatusAndPreview();
+            if (currentStep === 4) {
+                renderFullTree(createdBlocks);
+            }
         }
     } catch (err) {
         console.warn('Failed to load existing structure:', err);
     }
 }
 
+/**
+ * Render created blocks list in Step 2 with Rename & Delete triggers
+ */
 function renderBlocksList() {
     const list = document.getElementById('created-blocks-list');
     if (!list) return;
@@ -432,11 +569,18 @@ function renderBlocksList() {
 
     list.innerHTML = createdBlocks.map(b => {
         const floorCount = (b.floors || []).length;
+        const blockName = b.blockName || b.block_name;
         return `
-            <div style="background: var(--clr-surface-dim); border: 1px solid var(--clr-border); padding: 6px 14px; border-radius: var(--radius-full); font-weight: 600; font-size: var(--fs-sm); display: inline-flex; align-items: center; gap: 6px; color: var(--clr-primary);">
+            <div style="background: var(--clr-surface-dim); border: 1px solid var(--clr-border); padding: 5px 12px; border-radius: var(--radius-full); font-weight: 600; font-size: var(--fs-sm); display: inline-flex; align-items: center; gap: 8px; color: var(--clr-primary);">
                 <i data-lucide="building" style="width: 14px;"></i>
-                <span>Block ${b.blockName || b.block_name}</span>
+                <span>Block ${blockName}</span>
                 <span style="font-size: 11px; font-weight: 500; color: var(--clr-text-secondary); background: rgba(92, 26, 51, 0.08); padding: 2px 6px; border-radius: 10px;">${floorCount} floors</span>
+                <button type="button" class="btn-chip-action" title="Rename Block ${blockName}" onclick="openRenameBlockModal('${b.id}', '${blockName}')">
+                    <i data-lucide="edit-2" style="width: 12px; height: 12px;"></i>
+                </button>
+                <button type="button" class="btn-chip-action text-danger" title="Delete Block ${blockName}" onclick="openDeleteBlockModal('${b.id}', '${blockName}')">
+                    <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
+                </button>
             </div>
         `;
     }).join('');
@@ -491,29 +635,54 @@ async function refreshStructureTree() {
     }
 }
 
+/**
+ * Render visual structure tree in Step 4 with block actions, floor delete, and interactive unit chips
+ */
 function renderFullTree(blocks) {
     const container = document.getElementById('full-structure-tree');
     if (!container) return;
 
-    container.innerHTML = blocks.map(block => `
+    container.innerHTML = blocks.map(block => {
+        const blockName = block.blockName || block.block_name;
+        const floors = block.floors || [];
+        return `
         <div class="block-node">
             <div class="block-node-header">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <i data-lucide="building-2" style="width: 18px;"></i>
-                    <span>Block ${block.blockName}</span>
+                    <span style="font-weight: 700;">Block ${blockName}</span>
+                    <button type="button" class="btn-icon-subtle" title="Rename Block ${blockName}" onclick="openRenameBlockModal('${block.id}', '${blockName}')">
+                        <i data-lucide="edit-2" style="width: 13px; height: 13px;"></i>
+                    </button>
+                    <button type="button" class="btn-icon-subtle text-danger" title="Delete Block ${blockName}" onclick="openDeleteBlockModal('${block.id}', '${blockName}')">
+                        <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
+                    </button>
                 </div>
                 <span style="font-size: 11px; color: var(--clr-text-secondary); font-weight: 500;">
-                    ${(block.floors || []).length} Floors Total
+                    ${floors.length} Floors Total
                 </span>
             </div>
 
             <div class="floors-container">
-                ${(block.floors || []).map(floor => `
+                ${floors.length === 0 ? `
+                    <div style="padding: 10px; font-size: var(--fs-xs); color: var(--clr-text-muted); font-style: italic;">
+                        No floors yet. You can add floors in Step 3 or delete this empty block.
+                    </div>
+                ` : floors.map(floor => `
                     <div class="floor-row">
-                        <span class="floor-badge">Floor ${floor.floorNumber}</span>
+                        <div style="display: flex; align-items: center; gap: 6px; width: 95px; flex-shrink: 0;">
+                            <span class="floor-badge" style="width: auto;">Floor ${floor.floorNumber}</span>
+                            <button type="button" class="btn-floor-delete" title="Delete Floor ${floor.floorNumber}" onclick="openDeleteFloorModal('${block.id}', '${floor.id}', '${floor.floorNumber}', '${blockName}')">
+                                <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
+                            </button>
+                        </div>
                         <div class="units-flow">
-                            ${(floor.units || []).map(unit => `
-                                <span class="unit-chip ${unit.status === 'occupied' ? 'occupied' : 'vacant'}" title="${unit.displayLabel} - ${unit.status}">
+                            ${(floor.units || []).length === 0 ? `
+                                <span style="font-size: 11px; color: var(--clr-text-muted); font-style: italic;">No units</span>
+                            ` : (floor.units || []).map(unit => `
+                                <span class="unit-chip ${unit.status === 'occupied' ? 'occupied' : 'vacant'}" 
+                                      title="Click to view or edit Unit ${unit.displayLabel}"
+                                      onclick="openUnitModal('${unit.id}', '${unit.displayLabel}', '${unit.unitType || 'apartment'}', ${unit.areaSqft || 1200}, '${unit.status}')">
                                     <i data-lucide="${unit.status === 'occupied' ? 'user-check' : 'home'}" style="width: 11px;"></i>
                                     <span>${unit.displayLabel}</span>
                                 </span>
@@ -523,12 +692,276 @@ function renderFullTree(blocks) {
                 `).join('')}
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 
     if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [container] });
 }
 
-// Expose navigation functions to global scope for HTML onclick attributes
+// ══════════ Modal Dialogs Logic (Rename Block, Delete Block/Floor, Edit/Delete Unit) ══════════
+
+function setupModals() {
+    // 1. Rename Block Modal
+    const renameModal = document.getElementById('rename-block-modal');
+    const btnCloseRename = document.getElementById('btn-close-rename-block-modal');
+    const btnCancelRename = document.getElementById('btn-cancel-rename-block');
+    const formRename = document.getElementById('form-rename-block');
+
+    function closeRenameModal() {
+        if (renameModal) renameModal.style.display = 'none';
+    }
+
+    if (btnCloseRename) btnCloseRename.addEventListener('click', closeRenameModal);
+    if (btnCancelRename) btnCancelRename.addEventListener('click', closeRenameModal);
+    if (formRename) {
+        formRename.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const blockId = document.getElementById('rename-block-id').value;
+            const newName = document.getElementById('rename-block-input').value.trim().toUpperCase();
+
+            if (!blockId || !newName) return;
+
+            const submitBtn = document.getElementById('btn-submit-rename-block');
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+
+            const res = await Api.renameBlock(blockId, newName);
+
+            submitBtn.classList.remove('loading');
+            submitBtn.disabled = false;
+
+            if (res.success) {
+                Toast.success(`Block renamed to ${newName}. Unit labels synchronized!`);
+                closeRenameModal();
+                await loadExistingStructure();
+                if (currentStep === 4) refreshStructureTree();
+            } else {
+                Toast.error(res.message || 'Failed to rename block.');
+            }
+        });
+    }
+
+    // 2. Delete Block Modal
+    const deleteBlockModal = document.getElementById('delete-block-modal');
+    const btnCloseDeleteBlock = document.getElementById('btn-close-delete-block-modal');
+    const btnCancelDeleteBlock = document.getElementById('btn-cancel-delete-block');
+    const btnConfirmDeleteBlock = document.getElementById('btn-confirm-delete-block');
+
+    function closeDeleteBlockModal() {
+        if (deleteBlockModal) deleteBlockModal.style.display = 'none';
+    }
+
+    if (btnCloseDeleteBlock) btnCloseDeleteBlock.addEventListener('click', closeDeleteBlockModal);
+    if (btnCancelDeleteBlock) btnCancelDeleteBlock.addEventListener('click', closeDeleteBlockModal);
+    if (btnConfirmDeleteBlock) {
+        btnConfirmDeleteBlock.addEventListener('click', async () => {
+            const blockId = document.getElementById('delete-block-id').value;
+            if (!blockId) return;
+
+            btnConfirmDeleteBlock.classList.add('loading');
+            btnConfirmDeleteBlock.disabled = true;
+
+            const res = await Api.deleteBlock(blockId);
+
+            btnConfirmDeleteBlock.classList.remove('loading');
+            btnConfirmDeleteBlock.disabled = false;
+
+            if (res.success) {
+                Toast.success('Block deleted successfully!');
+                closeDeleteBlockModal();
+                await loadExistingStructure();
+                if (currentStep === 4) refreshStructureTree();
+            } else {
+                Toast.error(res.message || 'Cannot delete block with existing floors. Remove floors first.');
+            }
+        });
+    }
+
+    // 3. Delete Floor Modal
+    const deleteFloorModal = document.getElementById('delete-floor-modal');
+    const btnCloseDeleteFloor = document.getElementById('btn-close-delete-floor-modal');
+    const btnCancelDeleteFloor = document.getElementById('btn-cancel-delete-floor');
+    const btnConfirmDeleteFloor = document.getElementById('btn-confirm-delete-floor');
+
+    function closeDeleteFloorModal() {
+        if (deleteFloorModal) deleteFloorModal.style.display = 'none';
+    }
+
+    if (btnCloseDeleteFloor) btnCloseDeleteFloor.addEventListener('click', closeDeleteFloorModal);
+    if (btnCancelDeleteFloor) btnCancelDeleteFloor.addEventListener('click', closeDeleteFloorModal);
+    if (btnConfirmDeleteFloor) {
+        btnConfirmDeleteFloor.addEventListener('click', async () => {
+            const blockId = document.getElementById('delete-floor-block-id').value;
+            const floorId = document.getElementById('delete-floor-id').value;
+            if (!blockId || !floorId) return;
+
+            btnConfirmDeleteFloor.classList.add('loading');
+            btnConfirmDeleteFloor.disabled = true;
+
+            const res = await Api.deleteFloor(blockId, floorId);
+
+            btnConfirmDeleteFloor.classList.remove('loading');
+            btnConfirmDeleteFloor.disabled = false;
+
+            if (res.success) {
+                Toast.success('Floor deleted successfully!');
+                closeDeleteFloorModal();
+                await loadExistingStructure();
+                if (currentStep === 4) refreshStructureTree();
+            } else {
+                Toast.error(res.message || 'Cannot delete floor with existing units. Remove units first.');
+            }
+        });
+    }
+
+    // 4. Edit / Delete Unit Modal
+    const unitModal = document.getElementById('unit-modal');
+    const btnCloseUnit = document.getElementById('btn-close-unit-modal');
+    const btnCancelUnit = document.getElementById('btn-cancel-unit');
+    const formEditUnit = document.getElementById('form-edit-unit');
+    const btnDeleteUnit = document.getElementById('btn-delete-unit');
+
+    function closeUnitModal() {
+        if (unitModal) unitModal.style.display = 'none';
+    }
+
+    if (btnCloseUnit) btnCloseUnit.addEventListener('click', closeUnitModal);
+    if (btnCancelUnit) btnCancelUnit.addEventListener('click', closeUnitModal);
+
+    if (formEditUnit) {
+        formEditUnit.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const unitId = document.getElementById('edit-unit-id').value;
+            const unit_type = document.getElementById('edit-unit-type').value;
+            const area_sqft = parseInt(document.getElementById('edit-unit-area').value) || 1200;
+            const status = document.getElementById('edit-unit-status').value;
+
+            if (!unitId) return;
+
+            const saveBtn = document.getElementById('btn-save-unit');
+            saveBtn.classList.add('loading');
+            saveBtn.disabled = true;
+
+            const res = await Api.editUnit(unitId, { unit_type, area_sqft, status });
+
+            saveBtn.classList.remove('loading');
+            saveBtn.disabled = false;
+
+            if (res.success) {
+                Toast.success('Unit updated successfully!');
+                closeUnitModal();
+                await loadExistingStructure();
+                if (currentStep === 4) refreshStructureTree();
+            } else {
+                Toast.error(res.message || 'Failed to update unit.');
+            }
+        });
+    }
+
+    if (btnDeleteUnit) {
+        btnDeleteUnit.addEventListener('click', async () => {
+            const unitId = document.getElementById('edit-unit-id').value;
+            if (!unitId) return;
+
+            if (!confirm('Are you sure you want to permanently delete this unit?')) return;
+
+            btnDeleteUnit.disabled = true;
+            const res = await Api.deleteUnit(unitId);
+            btnDeleteUnit.disabled = false;
+
+            if (res.success) {
+                Toast.success('Unit deleted successfully!');
+                closeUnitModal();
+                await loadExistingStructure();
+                if (currentStep === 4) refreshStructureTree();
+            } else {
+                Toast.error(res.message || 'Cannot delete unit linked to resident or occupied.');
+            }
+        });
+    }
+
+    // Close on backdrop click
+    [renameModal, deleteBlockModal, deleteFloorModal, unitModal].forEach(modal => {
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.style.display = 'none';
+            });
+        }
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeRenameModal();
+            closeDeleteBlockModal();
+            closeDeleteFloorModal();
+            closeUnitModal();
+        }
+    });
+}
+
+// ══════════ Global Expositions for Inline Triggers ══════════
+
+window.openRenameBlockModal = function (blockId, currentName) {
+    const modal = document.getElementById('rename-block-modal');
+    const input = document.getElementById('rename-block-input');
+    const idInput = document.getElementById('rename-block-id');
+    if (!modal) return;
+
+    if (idInput) idInput.value = blockId;
+    if (input) {
+        input.value = currentName;
+        setTimeout(() => input.focus(), 50);
+    }
+    modal.style.display = 'flex';
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [modal] });
+};
+
+window.openDeleteBlockModal = function (blockId, blockName) {
+    const modal = document.getElementById('delete-block-modal');
+    const idInput = document.getElementById('delete-block-id');
+    const label = document.getElementById('delete-block-label');
+    if (!modal) return;
+
+    if (idInput) idInput.value = blockId;
+    if (label) label.textContent = `Block ${blockName}`;
+    modal.style.display = 'flex';
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [modal] });
+};
+
+window.openDeleteFloorModal = function (blockId, floorId, floorNumber, blockName) {
+    const modal = document.getElementById('delete-floor-modal');
+    const blockIdInput = document.getElementById('delete-floor-block-id');
+    const floorIdInput = document.getElementById('delete-floor-id');
+    const label = document.getElementById('delete-floor-label');
+    if (!modal) return;
+
+    if (blockIdInput) blockIdInput.value = blockId;
+    if (floorIdInput) floorIdInput.value = floorId;
+    if (label) label.textContent = `Floor ${floorNumber} of Block ${blockName}`;
+    modal.style.display = 'flex';
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [modal] });
+};
+
+window.openUnitModal = function (unitId, displayLabel, unitType, areaSqft, status) {
+    const modal = document.getElementById('unit-modal');
+    const idInput = document.getElementById('edit-unit-id');
+    const title = document.getElementById('unit-modal-title');
+    const typeSelect = document.getElementById('edit-unit-type');
+    const areaInput = document.getElementById('edit-unit-area');
+    const statusSelect = document.getElementById('edit-unit-status');
+    if (!modal) return;
+
+    if (idInput) idInput.value = unitId;
+    if (title) title.textContent = `Unit ${displayLabel}`;
+    if (typeSelect) typeSelect.value = unitType || 'apartment';
+    if (areaInput) areaInput.value = areaSqft || 1200;
+    if (statusSelect) statusSelect.value = status || 'vacant';
+
+    modal.style.display = 'flex';
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [modal] });
+};
+
 window.goToStep = goToStep;
 window.refreshStructureTree = refreshStructureTree;
 window.loadExistingStructure = loadExistingStructure;

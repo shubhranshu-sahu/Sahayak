@@ -117,18 +117,18 @@
                         </div>
                     </div>
 
-                    <!-- AI Notices / Activity -->
+                    <!-- Occupancy Rate & Structure -->
                     <div class="stat-card">
                         <div class="stat-card-header">
-                            <span class="stat-card-title">AI Agent Status</span>
+                            <span class="stat-card-title">Occupancy Rate</span>
                             <div class="stat-icon accent">
-                                <i data-lucide="cpu"></i>
+                                <i data-lucide="percent"></i>
                             </div>
                         </div>
-                        <div class="stat-card-value">Active</div>
+                        <div class="stat-card-value" id="stat-occupancy-rate">--%</div>
                         <div class="stat-card-footer">
-                            <span class="stat-badge positive">Online</span>
-                            <span>Ready to assist 24/7</span>
+                            <span class="stat-badge positive" id="stat-occupancy-badge">Optimal</span>
+                            <span id="stat-blocks-floors">· 0 Blocks · 0 Floors</span>
                         </div>
                     </div>
                 </div>
@@ -175,7 +175,7 @@
                         </div>
                     </div>
 
-                    <!-- Right Column: AI Assistant & Activity -->
+                    <!-- Right Column: AI Assistant & Recent Registrations -->
                     <div class="dashboard-right">
                         <!-- Sahayak AI Quick Assistant -->
                         <div class="panel-card ai-widget">
@@ -215,44 +215,20 @@
                             </div>
                         </div>
 
-                        <!-- Recent Activity Timeline -->
+                        <!-- Recent Registrations Widget -->
                         <div class="panel-card">
                             <div class="panel-header">
                                 <h3 class="panel-title">
-                                    <i data-lucide="activity" style="color: var(--clr-text-secondary);"></i>
-                                    Recent Activity
+                                    <i data-lucide="user-plus" style="color: var(--clr-primary);"></i>
+                                    Recent Registrations
                                 </h3>
+                                <a href="residents.html" class="panel-link">
+                                    <span>Directory</span>
+                                    <i data-lucide="arrow-right"></i>
+                                </a>
                             </div>
-                            <div class="panel-body">
-                                <ul style="list-style: none; display: flex; flex-direction: column; gap: var(--sp-4); font-size: var(--fs-xs);">
-                                    <li style="display: flex; gap: var(--sp-3); align-items: flex-start;">
-                                        <div style="width: 28px; height: 28px; border-radius: 50%; background: #E8F5E9; color: #2E7D32; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                            <i data-lucide="check" style="width: 14px;"></i>
-                                        </div>
-                                        <div>
-                                            <div style="font-weight: 600; color: var(--clr-text-primary);">Secretary account logged in</div>
-                                            <div style="color: var(--clr-text-secondary); margin-top: 2px;">Session verified with JWT</div>
-                                        </div>
-                                    </li>
-                                    <li style="display: flex; gap: var(--sp-3); align-items: flex-start;">
-                                        <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(92, 26, 51, 0.08); color: var(--clr-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                            <i data-lucide="shield-check" style="width: 14px;"></i>
-                                        </div>
-                                        <div>
-                                            <div style="font-weight: 600; color: var(--clr-text-primary);">Render API connected</div>
-                                            <div style="color: var(--clr-text-secondary); margin-top: 2px;">Cloud endpoints live and responsive</div>
-                                        </div>
-                                    </li>
-                                    <li style="display: flex; gap: var(--sp-3); align-items: flex-start;">
-                                        <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(160, 68, 255, 0.1); color: #A044FF; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                            <i data-lucide="cpu" style="width: 14px;"></i>
-                                        </div>
-                                        <div>
-                                            <div style="font-weight: 600; color: var(--clr-text-primary);">AI Assistant initialized</div>
-                                            <div style="color: var(--clr-text-secondary); margin-top: 2px;">Ready for resident circulars & inquiries</div>
-                                        </div>
-                                    </li>
-                                </ul>
+                            <div class="panel-body" id="recent-registrations-container">
+                                <div class="skeleton skeleton-card" style="height: 80px;"></div>
                             </div>
                         </div>
                     </div>
