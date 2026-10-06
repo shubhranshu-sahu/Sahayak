@@ -15,4 +15,8 @@ router.put('/setup', societyController.updateSocietyConfig);
 router.post('/blocks', societyController.addBlock);
 router.get('/structure', societyController.getStructure);
 
+// --- Phase 1B routes ---
+router.delete('/blocks/:blockId', societyController.deleteBlock);
+router.put('/blocks/:blockId', societyController.renameBlock);
+
 export default router;

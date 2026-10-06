@@ -9,4 +9,7 @@ router.get('/societies/:societyId/blocks', publicController.getBlocks);
 router.get('/blocks/:blockId/floors', publicController.getFloors);
 router.get('/floors/:floorId/units', publicController.getUnits);
 
+// Society code validation (Phase 1B)
+router.get('/validate-code/:code', publicController.validateSocietyCode);
+
 export default router;

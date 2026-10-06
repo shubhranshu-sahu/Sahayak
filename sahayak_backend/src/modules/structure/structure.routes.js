@@ -21,4 +21,26 @@ router.post(
   structureController.bulkAddUnits
 );
 
+// --- Phase 1B routes ---
+router.delete(
+  '/blocks/:blockId/floors/:floorId',
+  authenticateJWT,
+  authorizeRoles('secretary'),
+  structureController.deleteFloor
+);
+
+router.delete(
+  '/units/:unitId',
+  authenticateJWT,
+  authorizeRoles('secretary'),
+  structureController.deleteUnit
+);
+
+router.put(
+  '/units/:unitId',
+  authenticateJWT,
+  authorizeRoles('secretary'),
+  structureController.editUnit
+);
+
 export default router;

@@ -234,3 +234,103 @@ export const updateSocietyConfig = async (societyId, payload) => {
 
   return getSocietyConfig(societyId);
 };
+
+export const deleteBlock = async (societyId, blockId) => {
+  // Verify block belongs to the society
+  const [blocks] = await pool.execute(
+    'SELECT id, block_name FROM blocks WHERE id = ? AND society_id = ?',
+    [blockId, societyId]
+  );
+  if (blocks.length === 0) {
+    throw { status: 404, message: 'Block not found in your society' };
+  }
+
+  const blockName = blocks[0].block_name;
+
+  // Guard: Check if block has floors
+  const [floors] = await pool.execute(
+    'SELECT COUNT(*) AS floor_count FROM floors WHERE block_id = ?',
+    [blockId]
+  );
+  
+  const floorCount = floors[0].floor_count;
+  if (floorCount > 0) {
+    throw { status: 409, message: `Cannot delete block '${blockName}'. It has ${floorCount} floor(s). Delete all floors first.` };
+  }
+
+  // Delete the block
+  await pool.execute(
+    'DELETE FROM blocks WHERE id = ? AND society_id = ?',
+    [blockId, societyId]
+  );
+
+  return blockName;
+};
+
+export const renameBlock = async (societyId, blockId, newBlockName) => {
+  const blockNameUpper = newBlockName.toUpperCase();
+  const blockNameRegex = /^[A-Z]+$/;
+
+  if (!blockNameRegex.test(blockNameUpper)) {
+    throw { status: 400, message: 'Invalid block_name format. Only uppercase letters A-Z allowed.' };
+  }
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // Verify block exists and belongs to society
+    const [blocks] = await connection.execute(
+      'SELECT id, block_name FROM blocks WHERE id = ? AND society_id = ? FOR UPDATE',
+      [blockId, societyId]
+    );
+
+    if (blocks.length === 0) {
+      throw { status: 404, message: 'Block not found in your society' };
+    }
+
+    const oldName = blocks[0].block_name;
+
+    // If new name is the same as old name, no-op success
+    if (oldName === blockNameUpper) {
+      await connection.commit();
+      return { id: blockId, oldName, newName: blockNameUpper, unitsUpdated: 0 };
+    }
+
+    // Check if the NEW name already exists in this society
+    const [existingBlocks] = await connection.execute(
+      'SELECT id FROM blocks WHERE society_id = ? AND block_name = ? AND id != ?',
+      [societyId, blockNameUpper, blockId]
+    );
+
+    if (existingBlocks.length > 0) {
+      throw { status: 409, message: `Block name '${blockNameUpper}' already exists in this society.` };
+    }
+
+    // Update block name in blocks table
+    await connection.execute(
+      'UPDATE blocks SET block_name = ? WHERE id = ?',
+      [blockNameUpper, blockId]
+    );
+
+    // Propagate block name update to units table
+    const [unitUpdateResult] = await connection.execute(
+      'UPDATE units SET block_name = ? WHERE block_id = ?',
+      [blockNameUpper, blockId]
+    );
+
+    await connection.commit();
+
+    return {
+      id: Number(blockId),
+      oldName,
+      newName: blockNameUpper,
+      unitsUpdated: unitUpdateResult.affectedRows
+    };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+};

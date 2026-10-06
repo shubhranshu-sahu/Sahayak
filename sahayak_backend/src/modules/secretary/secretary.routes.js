@@ -15,4 +15,12 @@ router.post('/residents/:residentId/approve', secretaryController.approveResiden
 router.post('/residents/:residentId/reject', secretaryController.rejectResident);
 router.get('/residents', secretaryController.getActiveResidents);
 
+// --- Phase 1B routes ---
+// Resident lifecycle
+router.post('/residents/:residentId/revoke', secretaryController.revokeResident);
+router.get('/residents/all', secretaryController.getAllResidents);
+
+// Dashboard
+router.get('/dashboard/stats', secretaryController.getDashboardStats);
+
 export default router;
