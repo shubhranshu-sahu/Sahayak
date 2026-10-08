@@ -17,5 +17,37 @@ router.post(
   complaintsController.createComplaint
 );
 
-export default router;
+router.get(
+  '/my',
+  authorizeRoles('resident'),
+  complaintsController.getMyComplaints
+);
 
+router.post(
+  '/:id/confirm-resolved',
+  authorizeRoles('resident'),
+  complaintsController.confirmResolution
+);
+
+router.post(
+  '/:id/reopen',
+  authorizeRoles('resident'),
+  complaintsController.reopenComplaint
+);
+
+// ==========================================
+// 2. Shared Routes (Resident & Secretary)
+// ==========================================
+router.get(
+  '/:id',
+  authorizeRoles('resident', 'secretary'),
+  complaintsController.getComplaintById
+);
+
+router.post(
+  '/:id/replies',
+  authorizeRoles('resident', 'secretary'),
+  complaintsController.addReply
+);
+
+export default router;
