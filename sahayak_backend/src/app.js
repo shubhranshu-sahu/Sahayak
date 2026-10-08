@@ -7,6 +7,7 @@ import societyRoutes from './modules/society/society.routes.js';
 import structureRoutes from './modules/structure/structure.routes.js';
 import publicRoutes from './modules/public/public.routes.js';
 import secretaryRoutes from './modules/secretary/secretary.routes.js';
+import complaintRoutes from './modules/complaints/complaints.routes.js';
 
 // Middleware imports
 import { errorHandler } from './middlewares/error.middleware.js';
@@ -32,6 +33,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/public', publicRoutes);
 app.use('/api/v1/society', societyRoutes);
 app.use('/api/v1/secretary', secretaryRoutes);
+app.use('/api/v1/complaints', complaintRoutes);
 app.use('/api/v1', structureRoutes);
 
 // 404 handler

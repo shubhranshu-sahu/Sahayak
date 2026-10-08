@@ -18,6 +18,7 @@ router.get('/residents', secretaryController.getActiveResidents);
 // --- Phase 1B routes ---
 // Resident lifecycle
 router.post('/residents/:residentId/revoke', secretaryController.revokeResident);
+router.post('/residents/:residentId/reactivate', secretaryController.reactivateResident);
 router.get('/residents/all', secretaryController.getAllResidents);
 
 // Dashboard
