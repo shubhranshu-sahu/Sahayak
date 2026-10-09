@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as secretaryController from './secretary.controller.js';
 import { authenticateJWT } from '../../middlewares/auth.middleware.js';
 import { authorizeRoles } from '../../middlewares/role.middleware.js';
+import * as complaintsController from '../complaints/complaints.controller.js';
 
 const router = Router();
 
@@ -14,5 +15,19 @@ router.get('/residents/pending', secretaryController.getPendingResidents);
 router.post('/residents/:residentId/approve', secretaryController.approveResident);
 router.post('/residents/:residentId/reject', secretaryController.rejectResident);
 router.get('/residents', secretaryController.getActiveResidents);
+
+// --- Phase 1B routes ---
+// Resident lifecycle
+router.post('/residents/:residentId/revoke', secretaryController.revokeResident);
+router.post('/residents/:residentId/reactivate', secretaryController.reactivateResident);
+router.get('/residents/all', secretaryController.getAllResidents);
+
+// Dashboard
+router.get('/dashboard/stats', secretaryController.getDashboardStats);
+
+// Complaints Management (Secretary)
+router.get('/complaints/stats', complaintsController.getComplaintStats);
+router.get('/complaints', complaintsController.getSecretaryComplaints);
+router.patch('/complaints/:id/status', complaintsController.updateComplaintStatus);
 
 export default router;

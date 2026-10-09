@@ -56,7 +56,7 @@ app.add_middleware(
         "http://127.0.0.1:8000",
         "https://sahayak-yhn6.onrender.com",
     ],
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_origin_regex=r".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -66,7 +66,7 @@ app.add_middleware(
 app.include_router(chat_router)
 
 
-@app.get("/", tags=["General"])
+@app.api_route("/", methods=["GET", "HEAD"], tags=["General"])
 async def root():
     """Root endpoint welcoming the caller and pointing to API documentation."""
     return {
@@ -77,7 +77,7 @@ async def root():
     }
 
 
-@app.get("/health", tags=["Monitoring"])
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["Monitoring"])
 async def health_check():
     """
     Health check endpoint.

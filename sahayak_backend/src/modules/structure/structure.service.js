@@ -40,6 +40,10 @@ export const bulkAddFloors = async (societyId, blockId, total_floors) => {
     return {
       blockId: Number(blockId),
       floorsCreated: total_floors,
+      floorRange: {
+        from: startFloor,
+        to: startFloor + total_floors - 1
+      }
     };
   } catch (error) {
     await connection.rollback();
@@ -117,6 +121,7 @@ export const bulkAddUnits = async (societyId, floorId, payload) => {
     return {
       floorId: Number(floorId),
       unitsCreated,
+      unitsSkipped: (end_unit - start_unit + 1) - unitsCreated,
       exampleLabel: exampleLabel || 'N/A'
     };
   } catch (error) {
@@ -125,4 +130,136 @@ export const bulkAddUnits = async (societyId, floorId, payload) => {
   } finally {
     connection.release();
   }
+};
+
+export const deleteFloor = async (societyId, blockId, floorId) => {
+  // Verify floor exists, belongs to the correct block and society
+  const [floors] = await pool.execute(
+    `SELECT f.id, f.floor_number, f.block_id, b.block_name
+     FROM floors f
+     JOIN blocks b ON f.block_id = b.id
+     WHERE f.id = ? AND f.block_id = ? AND b.society_id = ?`,
+    [floorId, blockId, societyId]
+  );
+
+  if (floors.length === 0) {
+    throw { status: 404, message: 'Floor not found in this block.' };
+  }
+
+  const floorNumber = floors[0].floor_number;
+  const blockName = floors[0].block_name;
+
+  // Guard: Check if floor has units
+  const [units] = await pool.execute(
+    'SELECT COUNT(*) AS unit_count FROM units WHERE floor_id = ?',
+    [floorId]
+  );
+
+  const unitCount = units[0].unit_count;
+  if (unitCount > 0) {
+    throw { status: 409, message: `Cannot delete floor ${floorNumber}. It has ${unitCount} unit(s). Delete all units on this floor first.` };
+  }
+
+  // Delete the floor
+  await pool.execute('DELETE FROM floors WHERE id = ?', [floorId]);
+
+  return { floorNumber, blockName };
+};
+
+export const deleteUnit = async (societyId, unitId) => {
+  // 1. Verify unit exists and belongs to society
+  const [units] = await pool.execute(
+    'SELECT id, status, display_label FROM units WHERE id = ? AND society_id = ?',
+    [unitId, societyId]
+  );
+
+  if (units.length === 0) {
+    throw { status: 404, message: 'Unit not found in your society.' };
+  }
+
+  const unit = units[0];
+
+  // 2. Guard: Check if unit is occupied
+  if (unit.status === 'occupied') {
+    throw { status: 409, message: `Cannot delete unit '${unit.display_label}'. It is currently occupied by a resident. Revoke the resident first, then delete the unit.` };
+  }
+
+  // 3. Guard: Check if any user with active/pending status is still linked
+  const [users] = await pool.execute(
+    `SELECT id, name, status FROM users WHERE unit_id = ? AND status IN ('pending', 'active')`,
+    [unitId]
+  );
+
+  if (users.length > 0) {
+    throw { status: 409, message: 'Cannot delete unit. It has linked residents with active or pending status.' };
+  }
+
+  // 4. Delete the unit
+  await pool.execute('DELETE FROM units WHERE id = ?', [unitId]);
+
+  return { displayLabel: unit.display_label };
+};
+
+export const editUnit = async (societyId, unitId, payload) => {
+  const { unit_type, area_sqft } = payload;
+
+  // 1. Verify unit exists and belongs to society
+  const [units] = await pool.execute(
+    'SELECT id, display_label FROM units WHERE id = ? AND society_id = ?',
+    [unitId, societyId]
+  );
+
+  if (units.length === 0) {
+    throw { status: 404, message: 'Unit not found in your society.' };
+  }
+
+  // 2. Validate inputs
+  if (unit_type !== undefined) {
+    const validTypes = ['apartment', 'villa', 'row_house', 'plot', 'other'];
+    if (!validTypes.includes(unit_type)) {
+      throw { status: 400, message: 'Invalid unit_type. Must be one of: apartment, villa, row_house, plot, other.' };
+    }
+  }
+
+  if (area_sqft !== undefined && area_sqft !== null) {
+    if (!Number.isInteger(area_sqft) || area_sqft < 0 || area_sqft > 65535) {
+      throw { status: 400, message: 'area_sqft must be a positive integer up to 65535.' };
+    }
+  }
+
+  // 3. Build dynamic update query
+  const updates = [];
+  const values = [];
+
+  if (unit_type !== undefined) {
+    updates.push('unit_type = ?');
+    values.push(unit_type);
+  }
+  
+  if (area_sqft !== undefined) {
+    updates.push('area_sqft = ?');
+    values.push(area_sqft);
+  }
+
+  if (updates.length > 0) {
+    values.push(unitId);
+    const query = `UPDATE units SET ${updates.join(', ')} WHERE id = ?`;
+    await pool.execute(query, values);
+  }
+
+  // 4. Fetch and return updated unit details
+  const [updatedUnits] = await pool.execute(
+    'SELECT id, display_label, unit_type, area_sqft, status FROM units WHERE id = ?',
+    [unitId]
+  );
+
+  const updatedUnit = updatedUnits[0];
+
+  return {
+    id: updatedUnit.id,
+    displayLabel: updatedUnit.display_label,
+    unitType: updatedUnit.unit_type,
+    areaSqft: updatedUnit.area_sqft,
+    status: updatedUnit.status
+  };
 };

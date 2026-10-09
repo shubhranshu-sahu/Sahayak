@@ -64,3 +64,21 @@ export const getUnits = async (req, res, next) => {
     next(error);
   }
 };
+
+export const validateSocietyCode = async (req, res, next) => {
+  try {
+    const { code } = req.params;
+    const data = await publicService.validateSocietyCode(code);
+    
+    const message = data.available 
+      ? 'Society code is available' 
+      : 'Society code is already taken';
+      
+    return sendSuccess(res, 200, message, data);
+  } catch (error) {
+    if (error.status) {
+      return sendError(res, error.status, error.message);
+    }
+    next(error);
+  }
+};

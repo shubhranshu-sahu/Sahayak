@@ -91,3 +91,22 @@ export const getUnitsByFloor = async (floorId) => {
     isSelectable: row.status === 'vacant',
   }));
 };
+
+export const validateSocietyCode = async (code) => {
+  const codeUpper = code.toUpperCase();
+  const codeRegex = /^[A-Z][A-Z-]{2,19}$/;
+
+  if (!codeRegex.test(codeUpper)) {
+    throw { status: 400, message: 'Invalid code format. Must be 3-20 uppercase characters (A-Z and hyphens only), starting with a letter.' };
+  }
+
+  const [societies] = await pool.execute(
+    'SELECT id FROM societies WHERE society_code = ?',
+    [codeUpper]
+  );
+
+  return {
+    code: codeUpper,
+    available: societies.length === 0
+  };
+};

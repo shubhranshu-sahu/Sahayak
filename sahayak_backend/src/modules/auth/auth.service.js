@@ -70,7 +70,7 @@ export const registerResident = async ({ name, email, phone, password, society_i
 
     if (units[0].status !== 'vacant') {
       await connection.rollback();
-      const error = new Error('This unit is already claimed/occupied.');
+      const error = new Error('This unit is already claimed or occupied by another resident. Please select a different unit, or contact your society secretary if you believe this is an error.');
       error.statusCode = 409;
       throw error;
     }

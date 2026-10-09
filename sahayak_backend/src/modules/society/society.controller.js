@@ -70,3 +70,45 @@ export const updateSocietyConfig = async (req, res, next) => {
     next(error);
   }
 };
+
+export const deleteBlock = async (req, res, next) => {
+  try {
+    const { blockId } = req.params;
+    const blockName = await societyService.deleteBlock(req.user.societyId, blockId);
+    return sendSuccess(res, 200, `Block '${blockName}' deleted successfully.`);
+  } catch (error) {
+    if (error.status) {
+      return sendError(res, error.status, error.message);
+    }
+    next(error);
+  }
+};
+
+export const renameBlock = async (req, res, next) => {
+  try {
+    const { blockId } = req.params;
+    const { block_name } = req.body;
+
+    if (!block_name) {
+      return sendError(res, 400, 'block_name is required in request body');
+    }
+
+    const data = await societyService.renameBlock(req.user.societyId, blockId, block_name);
+    
+    return sendSuccess(
+      res, 
+      200, 
+      `Block renamed from '${data.oldName}' to '${data.newName}' successfully. All unit labels updated.`,
+      {
+        id: data.id,
+        blockName: data.newName,
+        unitsUpdated: data.unitsUpdated
+      }
+    );
+  } catch (error) {
+    if (error.status) {
+      return sendError(res, error.status, error.message);
+    }
+    next(error);
+  }
+};
