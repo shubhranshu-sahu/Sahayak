@@ -172,6 +172,25 @@ async function loadDashboardData(user) {
             sidebarPendingBadge.style.display = 'none';
         }
     }
+
+    // Update complaints badge in sidebar
+    try {
+        const compRes = await Api.getSecretaryComplaints({ limit: 1 });
+        if (compRes.success && compRes.data && compRes.data.counts) {
+            const openComp = compRes.data.counts.open || 0;
+            const compBadge = document.getElementById('sidebar-complaints-badge');
+            if (compBadge) {
+                if (openComp > 0) {
+                    compBadge.textContent = openComp;
+                    compBadge.style.display = 'inline-block';
+                } else {
+                    compBadge.style.display = 'none';
+                }
+            }
+        }
+    } catch {
+        // Silently handle
+    }
 }
 
 function renderRecentRegistrations(registrations) {

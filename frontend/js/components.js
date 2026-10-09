@@ -63,6 +63,12 @@ const Components = (() => {
                                     <span>Dashboard</span>
                                 </a>
                             </li>
+                            <li>
+                                <a href="complaints.html" class="nav-link ${activePage === 'complaints' ? 'active' : ''}">
+                                    <i data-lucide="clipboard-list"></i>
+                                    <span>Complaints</span>
+                                </a>
+                            </li>
                         </ul>
                     </div>
 
@@ -110,15 +116,10 @@ const Components = (() => {
                                 </a>
                             </li>
                             <li>
-                                <a href="feedback.html" class="nav-link ${activePage === 'feedback' ? 'active' : ''}">
+                                <a href="complaints.html" class="nav-link ${activePage === 'complaints' ? 'active' : ''}">
                                     <i data-lucide="clipboard-list"></i>
                                     <span>Complaints</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a href="analysis.html" class="nav-link ${activePage === 'analysis' ? 'active' : ''}">
-                                    <i data-lucide="pie-chart"></i>
-                                    <span>Analytics</span>
+                                    <span class="nav-badge nav-badge-pending" id="sidebar-complaints-badge" style="display: none;">0</span>
                                 </a>
                             </li>
                         </ul>

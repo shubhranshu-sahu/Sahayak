@@ -162,6 +162,7 @@ const Router = (() => {
             'resident-dashboard.html',
             'society-setup.html',
             'residents.html',
+            'complaints.html',
             'chat.html'
         ].some(p => path.includes(p));
 

@@ -70,6 +70,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const revokeModalResidentName = document.getElementById('revoke-modal-resident-name');
     const revokeModalResidentUnit = document.getElementById('revoke-modal-resident-unit');
 
+    // Reactivate Modal elements
+    const reactivateModal = document.getElementById('reactivate-modal');
+    const btnCloseReactivateModal = document.getElementById('btn-close-reactivate-modal');
+    const btnCancelReactivate = document.getElementById('btn-cancel-reactivate');
+    const btnConfirmReactivate = document.getElementById('btn-confirm-reactivate');
+    const reactivateModalResidentName = document.getElementById('reactivate-modal-resident-name');
+    const reactivateModalResidentStatus = document.getElementById('reactivate-modal-resident-status');
+    const reactivateUnitSelect = document.getElementById('reactivate-unit-select');
+    let targetedReactivateResident = null;
+
     // 5. Initial Data Loading
     await loadAllData();
 
@@ -141,12 +151,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     if (btnConfirmRevoke) btnConfirmRevoke.addEventListener('click', handleConfirmRevoke);
-ener('click', closeRejectModal);
-    rejectModal.addEventListener('click', (e) => {
-        if (e.target === rejectModal) closeRejectModal();
-    });
 
-    btnConfirmReject.addEventListener('click', handleConfirmReject);
+    // Reactivate Modal Events
+    if (btnCloseReactivateModal) btnCloseReactivateModal.addEventListener('click', closeReactivateModal);
+    if (btnCancelReactivate) btnCancelReactivate.addEventListener('click', closeReactivateModal);
+    if (reactivateModal) {
+        reactivateModal.addEventListener('click', (e) => {
+            if (e.target === reactivateModal) closeReactivateModal();
+        });
+    }
+    if (btnConfirmReactivate) btnConfirmReactivate.addEventListener('click', handleConfirmReactivate);
 
     // ════════════════════════════════════════════════════════
     // Data Loading Functions
@@ -594,6 +608,11 @@ ener('click', closeRejectModal);
                                 <i data-lucide="user-x" style="width: 13px;"></i>
                                 <span>Revoke</span>
                             </button>
+                        ` : (resident.status === 'inactive' || resident.status === 'rejected') ? `
+                            <button type="button" class="btn-reactivate-resident" title="Reactivate resident access & assign flat" data-id="${resident.userId}" data-name="${escapeHtml(resident.name)}" data-status="${resident.status}" style="background: rgba(46, 125, 50, 0.08); color: #2E7D32; border: 1px solid rgba(46, 125, 50, 0.2); padding: 4px 10px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                                <i data-lucide="rotate-cw" style="width: 13px;"></i>
+                                <span>Reactivate</span>
+                            </button>
                         ` : ''}
                     </div>
                 </td>
@@ -619,6 +638,11 @@ ener('click', closeRejectModal);
         // Attach revoke handlers
         tbody.querySelectorAll('.btn-revoke-resident').forEach(btn => {
             btn.addEventListener('click', () => handleRevokeClick(btn));
+        });
+
+        // Attach reactivate handlers
+        tbody.querySelectorAll('.btn-reactivate-resident').forEach(btn => {
+            btn.addEventListener('click', () => handleReactivateClick(btn));
         });
 
         if (window.lucide) lucide.createIcons({ nodes: [tbody] });
@@ -683,6 +707,99 @@ ener('click', closeRejectModal);
             Toast.error('An error occurred during revocation.');
             btnConfirmRevoke.disabled = false;
             if (txt) txt.textContent = 'Confirm Revocation';
+        }
+    }
+
+    // ════════════════════════════════════════════════════════
+    // Reactivation Flow (Reactivate Modal + Vacant Unit Picker)
+    // ════════════════════════════════════════════════════════
+
+    async function handleReactivateClick(btn) {
+        targetedReactivateResident = {
+            id: btn.dataset.id,
+            name: btn.dataset.name,
+            status: btn.dataset.status
+        };
+
+        if (reactivateModalResidentName) reactivateModalResidentName.textContent = targetedReactivateResident.name;
+        if (reactivateModalResidentStatus) reactivateModalResidentStatus.textContent = targetedReactivateResident.status;
+
+        // Fetch current vacant units
+        if (reactivateUnitSelect) {
+            reactivateUnitSelect.innerHTML = '<option value="">Loading vacant flats...</option>';
+            try {
+                const res = await Api.getVacantUnits();
+                const units = (res.success && res.data) ? res.data : [];
+                if (units.length === 0) {
+                    reactivateUnitSelect.innerHTML = '<option value="">No vacant units currently available in society</option>';
+                    if (btnConfirmReactivate) btnConfirmReactivate.disabled = true;
+                } else {
+                    reactivateUnitSelect.innerHTML = '<option value="">-- Choose a Vacant Flat to Allocate --</option>' +
+                        units.map(u => `<option value="${u.id}">Block ${u.blockName || u.block_name} · Flat ${u.displayLabel || u.display_label} (${u.unitType || u.unit_type || 'Unit'})</option>`).join('');
+                    if (btnConfirmReactivate) btnConfirmReactivate.disabled = false;
+                }
+            } catch (err) {
+                console.error('Failed to load vacant units:', err);
+                reactivateUnitSelect.innerHTML = '<option value="">Error loading vacant units</option>';
+            }
+        }
+
+        if (reactivateModal) {
+            reactivateModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            if (window.lucide) lucide.createIcons({ nodes: [reactivateModal] });
+        }
+    }
+
+    function closeReactivateModal() {
+        if (reactivateModal) reactivateModal.style.display = 'none';
+        document.body.style.overflow = '';
+        targetedReactivateResident = null;
+        if (btnConfirmReactivate) {
+            btnConfirmReactivate.disabled = false;
+            const txt = btnConfirmReactivate.querySelector('.btn-text');
+            if (txt) txt.textContent = 'Confirm Reactivation';
+        }
+    }
+
+    async function handleConfirmReactivate() {
+        if (!targetedReactivateResident) return;
+        const unitId = reactivateUnitSelect ? reactivateUnitSelect.value : null;
+        if (!unitId) {
+            Toast.warning('Please select a vacant flat to assign.');
+            return;
+        }
+
+        if (btnConfirmReactivate) {
+            btnConfirmReactivate.disabled = true;
+            const txt = btnConfirmReactivate.querySelector('.btn-text');
+            if (txt) {
+                txt.innerHTML = `<span class="spinner" style="width:14px; height:14px; border-width:2px; vertical-align:middle; display:inline-block;"></span> Reactivating...`;
+            }
+        }
+
+        try {
+            const res = await Api.reactivateResident(targetedReactivateResident.id, unitId);
+            if (res.success) {
+                Toast.success(res.message || 'Resident reactivated successfully!');
+                closeReactivateModal();
+                await loadAllData();
+            } else {
+                Toast.error(res.message || 'Failed to reactivate resident.');
+                if (btnConfirmReactivate) {
+                    btnConfirmReactivate.disabled = false;
+                    const txt = btnConfirmReactivate.querySelector('.btn-text');
+                    if (txt) txt.textContent = 'Confirm Reactivation';
+                }
+            }
+        } catch (err) {
+            console.error('Reactivation error:', err);
+            Toast.error('An error occurred during reactivation.');
+            if (btnConfirmReactivate) {
+                btnConfirmReactivate.disabled = false;
+                const txt = btnConfirmReactivate.querySelector('.btn-text');
+                if (txt) txt.textContent = 'Confirm Reactivation';
+            }
         }
     }
 

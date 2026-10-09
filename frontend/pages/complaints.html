@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complaints & Helpdesk — Sahayak</title>
+    <meta name="description" content="Community complaints management, resolution threads, and helpdesk portal.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/complaints.css">
+    <link rel="stylesheet" href="../css/cursor.css">
+</head>
+
+<body>
+    <!-- App Layout -->
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside id="app-sidebar"></aside>
+
+        <!-- Main Workspace -->
+        <main class="main-workspace">
+            <!-- Topbar -->
+            <header id="app-topbar"></header>
+
+            <!-- Page Body -->
+            <div class="content-body">
+                <!-- Skeleton Placeholder (Shown during initial data load) -->
+                <div id="complaints-skeleton" class="skeleton-screen-wrapper">
+                    <div class="skeleton skeleton-banner"></div>
+                    <div class="complaints-stats-grid">
+                        <div class="skeleton skeleton-stat"></div>
+                        <div class="skeleton skeleton-stat"></div>
+                        <div class="skeleton skeleton-stat"></div>
+                        <div class="skeleton skeleton-stat"></div>
+                    </div>
+                    <div class="skeleton skeleton-panel" style="height: 380px;"></div>
+                </div>
+
+                <!-- ════════════════════════════════════════════════════════════ -->
+                <!-- 1. SECRETARY VIEW                                            -->
+                <!-- ════════════════════════════════════════════════════════════ -->
+                <div id="secretary-view" style="display: none;">
+                    <!-- Header -->
+                    <div class="complaints-header">
+                        <div class="complaints-header-left">
+                            <div class="header-badge">
+                                <i data-lucide="clipboard-list"></i>
+                                <span>RWA Helpdesk & Maintenance</span>
+                            </div>
+                            <h2 class="complaints-title">Society Complaints Command Center</h2>
+                            <p class="complaints-subtitle">Monitor resident concerns, advance resolution workflows, communicate in real-time threads, and review resolution analytics.</p>
+                        </div>
+                        <div class="complaints-header-actions">
+                            <button type="button" class="btn-refresh" id="btn-refresh-secretary" title="Refresh complaints">
+                                <i data-lucide="rotate-cw" id="icon-refresh-sec"></i>
+                                <span>Refresh</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 6 Status Metric Cards -->
+                    <div class="complaints-stats-grid">
+                        <div class="c-stat-card">
+                            <div class="c-stat-header">
+                                <span class="c-stat-label">Total</span>
+                                <div class="c-stat-icon total"><i data-lucide="inbox"></i></div>
+                            </div>
+                            <div class="c-stat-val" id="sec-stat-total">0</div>
+                            <div class="c-stat-footer">All time society tickets</div>
+                        </div>
+
+                        <div class="c-stat-card">
+                            <div class="c-stat-header">
+                                <span class="c-stat-label">Open</span>
+                                <div class="c-stat-icon open"><i data-lucide="alert-circle"></i></div>
+                            </div>
+                            <div class="c-stat-val" id="sec-stat-open" style="color: #E65100;">0</div>
+                            <div class="c-stat-footer">Awaiting secretary review</div>
+                        </div>
+
+                        <div class="c-stat-card">
+                            <div class="c-stat-header">
+                                <span class="c-stat-label">In Progress</span>
+                                <div class="c-stat-icon in-progress"><i data-lucide="wrench"></i></div>
+                            </div>
+                            <div class="c-stat-val" id="sec-stat-progress" style="color: #1976D2;">0</div>
+                            <div class="c-stat-footer">Active work underway</div>
+                        </div>
+
+                        <div class="c-stat-card">
+                            <div class="c-stat-header">
+                                <span class="c-stat-label">Pending Closure</span>
+                                <div class="c-stat-icon pending-closure"><i data-lucide="clock"></i></div>
+                            </div>
+                            <div class="c-stat-val" id="sec-stat-pending-closure" style="color: #7B1FA2;">0</div>
+                            <div class="c-stat-footer">Awaiting resident check</div>
+                        </div>
+
+                        <div class="c-stat-card">
+                            <div class="c-stat-header">
+                                <span class="c-stat-label">Resolved</span>
+                                <div class="c-stat-icon closed"><i data-lucide="check-circle-2"></i></div>
+                            </div>
+                            <div class="c-stat-val" id="sec-stat-closed" style="color: #2E7D32;">0</div>
+                            <div class="c-stat-footer">Confirmed closed</div>
+                        </div>
+
+                        <div class="c-stat-card">
+                            <div class="c-stat-header">
+                                <span class="c-stat-label">Rejected</span>
+                                <div class="c-stat-icon rejected"><i data-lucide="x-circle"></i></div>
+                            </div>
+                            <div class="c-stat-val" id="sec-stat-rejected" style="color: #C62828;">0</div>
+                            <div class="c-stat-footer">Closed with reason</div>
+                        </div>
+                    </div>
+
+                    <!-- Filter Toolbar -->
+                    <div class="complaints-toolbar">
+                        <!-- Tabs -->
+                        <div class="complaints-tabs">
+                            <button type="button" class="c-tab-btn active" data-tab="all">
+                                <span>All</span>
+                                <span class="c-tab-badge" id="sec-badge-all">0</span>
+                            </button>
+                            <button type="button" class="c-tab-btn" data-tab="open">
+                                <span>Open</span>
+                                <span class="c-tab-badge" id="sec-badge-open">0</span>
+                            </button>
+                            <button type="button" class="c-tab-btn" data-tab="in_progress">
+                                <span>In Progress</span>
+                                <span class="c-tab-badge" id="sec-badge-progress">0</span>
+                            </button>
+                            <button type="button" class="c-tab-btn" data-tab="pending_closure">
+                                <span>Pending Closure</span>
+                                <span class="c-tab-badge" id="sec-badge-closure">0</span>
+                            </button>
+                            <button type="button" class="c-tab-btn" data-tab="closed">
+                                <span>Closed</span>
+                                <span class="c-tab-badge" id="sec-badge-closed">0</span>
+                            </button>
+                            <button type="button" class="c-tab-btn" data-tab="rejected">
+                                <span>Rejected</span>
+                                <span class="c-tab-badge" id="sec-badge-rejected">0</span>
+                            </button>
+                            <button type="button" class="c-tab-btn" data-tab="analytics" style="border-left: 1px solid var(--clr-border); margin-left: 4px; padding-left: 12px;">
+                                <i data-lucide="bar-chart-2"></i>
+                                <span>Analytics</span>
+                            </button>
+                        </div>
+
+                        <!-- Filters & Search -->
+                        <div class="complaints-filter-group" id="sec-filters-bar">
+                            <div class="search-input-wrapper">
+                                <i data-lucide="search" class="search-icon"></i>
+                                <input type="text" id="sec-search-input" class="search-input" placeholder="Search title, flat (A-101), name...">
+                                <button type="button" id="sec-btn-clear-search" class="btn-clear-search" style="display: none;">
+                                    <i data-lucide="x"></i>
+                                </button>
+                            </div>
+
+                            <select id="sec-category-select" class="c-select-filter">
+                                <option value="">All Categories</option>
+                                <option value="plumbing">Plumbing</option>
+                                <option value="electrical">Electrical</option>
+                                <option value="lift">Lift & Elevator</option>
+                                <option value="cleanliness">Cleanliness</option>
+                                <option value="security">Security</option>
+                                <option value="parking">Parking</option>
+                                <option value="noise">Noise</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Complaints List Container -->
+                    <div id="sec-complaints-list-view">
+                        <div id="sec-complaints-container" class="complaints-list">
+                            <!-- Populated dynamically -->
+                        </div>
+
+                        <!-- Pagination Footer -->
+                        <div id="sec-pagination" class="panel-footer" style="display: none; justify-content: space-between; align-items: center; margin-top: var(--sp-4);">
+                            <span style="font-size: var(--fs-xs); color: var(--clr-text-secondary);" id="sec-page-info">Page 1 of 1</span>
+                            <div style="display: flex; gap: var(--sp-2);">
+                                <button type="button" class="btn-secondary" id="sec-btn-prev" disabled>Previous</button>
+                                <button type="button" class="btn-secondary" id="sec-btn-next" disabled>Next</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Secretary Analytics View -->
+                    <div id="sec-analytics-view" style="display: none;">
+                        <div class="analytics-grid">
+                            <!-- Performance & Resolution Speed -->
+                            <div class="analytics-card">
+                                <div class="analytics-card-header">
+                                    <h4 class="analytics-title"><i data-lucide="zap" style="color: var(--clr-primary);"></i> Resolution Performance</h4>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4);">
+                                    <div class="perf-metric-badge">
+                                        <div class="perf-metric-num" id="stat-avg-hours">0</div>
+                                        <div class="perf-metric-desc">Avg Hours to Close</div>
+                                    </div>
+                                    <div class="perf-metric-badge">
+                                        <div class="perf-metric-num" id="stat-avg-days">0</div>
+                                        <div class="perf-metric-desc">Avg Days to Close</div>
+                                    </div>
+                                </div>
+                                <p style="font-size: 11px; color: var(--clr-text-muted); margin-top: var(--sp-4); line-height: 1.5;">
+                                    Calculated from all confirmed closed complaints since society inception. Auto-closed complaints after 7 days are included.
+                                </p>
+                            </div>
+
+                            <!-- Category Distribution -->
+                            <div class="analytics-card">
+                                <div class="analytics-card-header">
+                                    <h4 class="analytics-title"><i data-lucide="pie-chart" style="color: var(--clr-primary);"></i> Category Breakdown</h4>
+                                </div>
+                                <div id="category-bars-container">
+                                    <!-- Dynamic percentage bars -->
+                                </div>
+                            </div>
+
+                            <!-- Top Complaint-Heavy Units -->
+                            <div class="analytics-card" style="grid-column: 1 / -1;">
+                                <div class="analytics-card-header">
+                                    <h4 class="analytics-title"><i data-lucide="alert-triangle" style="color: var(--clr-warning);"></i> Top Units by Complaint Frequency</h4>
+                                </div>
+                                <div id="top-units-container" style="display: flex; gap: var(--sp-4); flex-wrap: wrap;">
+                                    <!-- Dynamic top unit cards -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════════════════════════════════════════════════════ -->
+                <!-- 2. RESIDENT VIEW                                             -->
+                <!-- ════════════════════════════════════════════════════════════ -->
+                <div id="resident-view" style="display: none;">
+                    <!-- Header -->
+                    <div class="complaints-header">
+                        <div class="complaints-header-left">
+                            <div class="header-badge" style="background: rgba(46, 125, 50, 0.1); color: var(--clr-success);">
+                                <i data-lucide="shield"></i>
+                                <span>My Residence Helpdesk</span>
+                            </div>
+                            <h2 class="complaints-title">Maintenance & Complaints</h2>
+                            <p class="complaints-subtitle">Report plumbing, electrical, or community issues directly to your society secretary. Track work in progress and verify completed fixes.</p>
+                        </div>
+                        <div class="complaints-header-actions">
+                            <button type="button" class="btn-raise-complaint" id="btn-open-raise-modal">
+                                <i data-lucide="plus-circle"></i>
+                                <span>Raise New Complaint</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 4 Resident Metric Cards -->
+                    <div class="complaints-stats-grid">
+                        <div class="c-stat-card">
+                            <div class="c-stat-header">
+                                <span class="c-stat-label">My Total</span>
+                                <div class="c-stat-icon total"><i data-lucide="inbox"></i></div>
+                            </div>
+                            <div class="c-stat-val" id="res-stat-total">0</div>
+                            <div class="c-stat-footer">Complaints lodged</div>
+                        </div>
+
+                        <div class="c-stat-card">
+                            <div class="c-stat-header">
+                                <span class="c-stat-label">Active / Open</span>
+                                <div class="c-stat-icon open"><i data-lucide="clock"></i></div>
+                            </div>
+                            <div class="c-stat-val" id="res-stat-active" style="color: #E65100;">0</div>
+                            <div class="c-stat-footer">Under investigation</div>
+                        </div>
+
+                        <div class="c-stat-card">
+                            <div class="c-stat-header">
+                                <span class="c-stat-label">Needs Confirmation</span>
+                                <div class="c-stat-icon pending-closure"><i data-lucide="alert-circle"></i></div>
+                            </div>
+                            <div class="c-stat-val" id="res-stat-closure" style="color: #7B1FA2;">0</div>
+                            <div class="c-stat-footer">Awaiting your approval</div>
+                        </div>
+
+                        <div class="c-stat-card">
+                            <div class="c-stat-header">
+                                <span class="c-stat-label">Resolved & Closed</span>
+                                <div class="c-stat-icon closed"><i data-lucide="check-circle-2"></i></div>
+                            </div>
+                            <div class="c-stat-val" id="res-stat-closed" style="color: #2E7D32;">0</div>
+                            <div class="c-stat-footer">Completed issues</div>
+                        </div>
+                    </div>
+
+                    <!-- Status Tabs -->
+                    <div class="complaints-toolbar">
+                        <div class="complaints-tabs">
+                            <button type="button" class="c-tab-btn active" data-tab="all">
+                                <span>All My Complaints</span>
+                            </button>
+                            <button type="button" class="c-tab-btn" data-tab="open">
+                                <span>Open</span>
+                            </button>
+                            <button type="button" class="c-tab-btn" data-tab="in_progress">
+                                <span>In Progress</span>
+                            </button>
+                            <button type="button" class="c-tab-btn" data-tab="pending_closure">
+                                <span>Pending Closure</span>
+                            </button>
+                            <button type="button" class="c-tab-btn" data-tab="closed">
+                                <span>Closed</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Resident Complaints List -->
+                    <div id="res-complaints-container" class="complaints-list">
+                        <!-- Populated dynamically -->
+                    </div>
+
+                    <!-- Pagination -->
+                    <div id="res-pagination" class="panel-footer" style="display: none; justify-content: space-between; align-items: center; margin-top: var(--sp-4);">
+                        <span style="font-size: var(--fs-xs); color: var(--clr-text-secondary);" id="res-page-info">Page 1 of 1</span>
+                        <div style="display: flex; gap: var(--sp-2);">
+                            <button type="button" class="btn-secondary" id="res-btn-prev" disabled>Previous</button>
+                            <button type="button" class="btn-secondary" id="res-btn-next" disabled>Next</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div> <!-- End content-body -->
+        </main>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- MODALS & DRAWERS                                             -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+
+    <!-- 1. DISCUSSION & DETAIL DRAWER -->
+    <div id="drawer-backdrop" class="drawer-backdrop">
+        <div class="complaint-drawer">
+            <!-- Drawer Header -->
+            <div class="drawer-header">
+                <div class="drawer-header-info">
+                    <div style="display: flex; align-items: center; gap: var(--sp-2);">
+                        <span id="drawer-category-tag" class="category-tag">plumbing</span>
+                        <span id="drawer-status-pill" class="status-pill status-pill-open">Open</span>
+                    </div>
+                    <h3 id="drawer-title" class="drawer-title">Complaint Title</h3>
+                    <div class="drawer-meta-bar">
+                        <span style="font-size: 11px; color: var(--clr-text-muted);" id="drawer-meta-created">Raised: Today</span>
+                        <span style="font-size: 11px; color: var(--clr-text-muted);">·</span>
+                        <span style="font-size: 11px; font-weight: 600; color: var(--clr-primary);" id="drawer-meta-unit">Flat A-101</span>
+                        <span style="font-size: 11px; color: var(--clr-text-muted);">·</span>
+                        <span style="font-size: 11px; color: var(--clr-text-secondary);" id="drawer-meta-resident">Resident Name</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-modal-close" id="btn-close-drawer" aria-label="Close drawer">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <!-- Drawer Body -->
+            <div class="drawer-body" id="drawer-body">
+                <!-- Original Complaint Overview Card -->
+                <div class="complaint-overview-card">
+                    <span style="font-size: 11px; font-weight: 700; color: var(--clr-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Initial Concern Description</span>
+                    <p id="drawer-description" class="complaint-full-desc">...</p>
+                    <div id="drawer-attachment-box" class="complaint-attachment-preview" style="display: none;">
+                        <span style="font-size: 11px; font-weight: 600; color: var(--clr-text-secondary); display: block; margin-bottom: 6px;">Attachment Photo:</span>
+                        <img id="drawer-attachment-img" src="" alt="Complaint photo" class="attachment-thumbnail">
+                    </div>
+                </div>
+
+                <!-- Special Action Alert for Resident (Pending Closure) -->
+                <div id="drawer-pending-closure-alert" style="display: none; background: #FFF8E1; border: 1px solid #FFE082; border-radius: var(--radius-md); padding: var(--sp-3) var(--sp-4);">
+                    <div style="display: flex; gap: var(--sp-2); align-items: flex-start;">
+                        <i data-lucide="check-circle" style="color: #F57F17; width: 18px; flex-shrink: 0;"></i>
+                        <div>
+                            <strong style="font-size: var(--fs-xs); color: #E65100;">Secretary Marked this Pending Closure</strong>
+                            <p style="font-size: 11px; color: var(--clr-text-secondary); margin-top: 2px;">
+                                Please confirm if the work was completed satisfactorily. If not, you can reopen it with details.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Discussion Thread Header -->
+                <div class="thread-section-title">
+                    <i data-lucide="message-square" style="width: 14px;"></i>
+                    <span>Communication & Activity Thread</span>
+                </div>
+
+                <!-- Thread Messages Stream -->
+                <div id="thread-messages-list" class="thread-messages-list">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Drawer Footer (Controls & Quick Reply) -->
+            <div class="drawer-footer" id="drawer-footer">
+                <!-- Secretary Actions Row -->
+                <div class="drawer-action-controls" id="sec-drawer-actions" style="display: none;">
+                    <button type="button" class="btn-secondary" id="btn-status-in-progress" style="font-size: 11px; padding: 5px 10px;">
+                        <i data-lucide="wrench" style="width: 13px;"></i>
+                        <span>Mark In Progress</span>
+                    </button>
+                    <button type="button" class="btn-secondary" id="btn-status-pending-closure" style="font-size: 11px; padding: 5px 10px; color: #7B1FA2; border-color: #E1BEE7;">
+                        <i data-lucide="clock" style="width: 13px;"></i>
+                        <span>Request Closure</span>
+                    </button>
+                    <button type="button" class="btn-secondary" id="btn-status-reject" style="font-size: 11px; padding: 5px 10px; color: #C62828; border-color: #FFCDD2;">
+                        <i data-lucide="x" style="width: 13px;"></i>
+                        <span>Reject</span>
+                    </button>
+                </div>
+
+                <!-- Resident Actions Row (Pending Closure actions) -->
+                <div class="drawer-action-controls" id="res-drawer-actions" style="display: none;">
+                    <button type="button" class="btn-secondary" id="btn-resident-reopen" style="font-size: 12px; padding: 6px 12px; color: #E65100; border-color: #FFE082;">
+                        <i data-lucide="rotate-cw" style="width: 14px;"></i>
+                        <span>Issue Unresolved (Reopen)</span>
+                    </button>
+                    <button type="button" class="btn-action-approve" id="btn-resident-confirm" style="font-size: 12px; padding: 6px 14px;">
+                        <i data-lucide="check-check" style="width: 14px;"></i>
+                        <span>Confirm Resolved</span>
+                    </button>
+                </div>
+
+                <!-- Quick Reply Form -->
+                <form id="reply-form" class="reply-form">
+                    <textarea id="reply-message" class="reply-textarea" placeholder="Type a message to the resident / committee..." rows="2"></textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--clr-text-muted); margin-top: -3px; margin-bottom: 2px;">
+                        <span><kbd style="font-family: inherit; background: var(--clr-surface-dim); border: 1px solid var(--clr-border); border-radius: 3px; padding: 1px 5px; font-size: 10px;">Enter</kbd> to send · <kbd style="font-family: inherit; background: var(--clr-surface-dim); border: 1px solid var(--clr-border); border-radius: 3px; padding: 1px 5px; font-size: 10px;">Shift + Enter</kbd> newline</span>
+                        <span id="reply-char-hint" style="opacity: 0.7; font-size: 10px;">⚡ Instant sync</span>
+                    </div>
+                    <div class="reply-actions-row">
+                        <div style="flex: 1; max-width: 320px; display: flex; align-items: center; gap: 6px;">
+                            <i data-lucide="image" style="width: 14px; color: var(--clr-text-muted);"></i>
+                            <input type="url" id="reply-attachment-url" placeholder="Optional Photo URL (Cloudinary)" style="font-size: 11px; padding: 4px 8px; border: 1px solid var(--clr-border); border-radius: var(--radius-sm); width: 100%; outline: none; background: var(--clr-surface-dim);">
+                        </div>
+                        <button type="submit" class="btn-send-reply" id="btn-send-reply">
+                            <i data-lucide="send" style="width: 14px;"></i>
+                            <span>Send Reply</span>
+                        </button>
+                    </div>
+                </form>
+
+                <div id="drawer-closed-notice" style="display: none; text-align: center; font-size: var(--fs-xs); color: var(--clr-text-muted); padding: var(--sp-2);">
+                    🔒 This complaint is closed. No further replies can be sent.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. RAISE NEW COMPLAINT MODAL (Resident) -->
+    <div id="raise-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card" style="max-width: 540px;">
+            <div class="modal-header">
+                <div class="modal-icon-badge" style="background: rgba(92, 26, 51, 0.08); color: var(--clr-primary);">
+                    <i data-lucide="plus-circle"></i>
+                </div>
+                <div>
+                    <h3 class="modal-title">Raise New Maintenance Complaint</h3>
+                    <p class="modal-subtitle">Submit details to the society management committee</p>
+                </div>
+                <button type="button" class="btn-modal-close" id="btn-close-raise-modal" aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <form id="raise-complaint-form">
+                <div class="modal-body" style="display: flex; flex-direction: column; gap: var(--sp-4);">
+                    <div>
+                        <label for="complaint-title" style="display: block; font-weight: 600; font-size: var(--fs-xs); margin-bottom: 4px;">
+                            Issue Title <span style="color: var(--clr-danger);">*</span>
+                        </label>
+                        <input type="text" id="complaint-title" required minlength="3" maxlength="200" placeholder="e.g. Water leakage in master bathroom ceiling" style="width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--clr-border); border-radius: var(--radius-md); font-size: var(--fs-sm); outline: none;">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);">
+                        <div>
+                            <label for="complaint-category" style="display: block; font-weight: 600; font-size: var(--fs-xs); margin-bottom: 4px;">
+                                Category <span style="color: var(--clr-danger);">*</span>
+                            </label>
+                            <select id="complaint-category" required style="width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--clr-border); border-radius: var(--radius-md); font-size: var(--fs-sm); outline: none; background: var(--clr-surface);">
+                                <option value="plumbing">Plumbing</option>
+                                <option value="electrical">Electrical</option>
+                                <option value="lift">Lift & Elevator</option>
+                                <option value="cleanliness">Cleanliness</option>
+                                <option value="security">Security</option>
+                                <option value="parking">Parking</option>
+                                <option value="noise">Noise</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+
+                        <div id="category-label-wrapper" style="display: none;">
+                            <label for="complaint-category-label" style="display: block; font-weight: 600; font-size: var(--fs-xs); margin-bottom: 4px;">
+                                Specify Category <span style="color: var(--clr-danger);">*</span>
+                            </label>
+                            <input type="text" id="complaint-category-label" placeholder="e.g. Garden Pest Control" style="width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--clr-border); border-radius: var(--radius-md); font-size: var(--fs-sm); outline: none;">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="complaint-description" style="display: block; font-weight: 600; font-size: var(--fs-xs); margin-bottom: 4px;">
+                            Detailed Description <span style="color: var(--clr-danger);">*</span>
+                        </label>
+                        <textarea id="complaint-description" required minlength="10" rows="4" placeholder="Please provide specific location, frequency, and symptoms of the issue (min 10 characters)..." style="width: 100%; padding: 10px 12px; border: 1px solid var(--clr-border); border-radius: var(--radius-md); font-size: var(--fs-sm); font-family: var(--ff-body); outline: none;"></textarea>
+                    </div>
+
+                    <div>
+                        <label for="complaint-attachment" style="display: block; font-weight: 600; font-size: var(--fs-xs); margin-bottom: 4px;">
+                            Photo Attachment URL (Optional)
+                        </label>
+                        <input type="url" id="complaint-attachment" placeholder="https://res.cloudinary.com/... or image link" style="width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--clr-border); border-radius: var(--radius-md); font-size: var(--fs-sm); outline: none;">
+                        <span style="font-size: 11px; color: var(--clr-text-muted); margin-top: 4px; display: block;">You can also paste links from cloud storage or image hosts.</span>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="btn-cancel-raise">Cancel</button>
+                    <button type="submit" class="btn-action-approve" id="btn-submit-raise">
+                        <span class="btn-text">Submit Complaint</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. CONFIRM RESOLUTION MODAL (Resident) -->
+    <div id="confirm-resolve-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon-badge" style="background: #E8F5E9; color: #2E7D32;">
+                    <i data-lucide="check-circle-2"></i>
+                </div>
+                <div>
+                    <h3 class="modal-title">Confirm Resolution</h3>
+                    <p class="modal-subtitle">Verify that the issue has been resolved</p>
+                </div>
+                <button type="button" class="btn-modal-close" id="btn-close-resolve-modal" aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <p>Are you satisfied with the maintenance work done on <strong id="resolve-modal-title" style="color: var(--clr-primary);">Complaint</strong>?</p>
+                <div style="margin-top: var(--sp-4);">
+                    <label for="resolve-feedback" style="display: block; font-weight: 600; font-size: var(--fs-xs); margin-bottom: 4px;">
+                        Feedback / Note for Committee (Optional)
+                    </label>
+                    <textarea id="resolve-feedback" rows="3" placeholder="e.g. Technician arrived on time, problem solved cleanly. Thank you!" style="width: 100%; padding: 8px 12px; border: 1px solid var(--clr-border); border-radius: var(--radius-md); font-size: var(--fs-sm); font-family: var(--ff-body); outline: none;"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="btn-cancel-resolve">Cancel</button>
+                <button type="button" class="btn-action-approve" id="btn-confirm-resolve-action">
+                    <span class="btn-text">Confirm & Close Ticket</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. REOPEN COMPLAINT MODAL (Resident) -->
+    <div id="reopen-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon-badge" style="background: #FFF3E0; color: #E65100;">
+                    <i data-lucide="rotate-cw"></i>
+                </div>
+                <div>
+                    <h3 class="modal-title">Reopen Complaint</h3>
+                    <p class="modal-subtitle">Report why the issue remains unresolved</p>
+                </div>
+                <button type="button" class="btn-modal-close" id="btn-close-reopen-modal" aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <p>Move <strong id="reopen-modal-title" style="color: var(--clr-primary);">Complaint</strong> back to <strong>In Progress</strong>.</p>
+                <div style="margin-top: var(--sp-4);">
+                    <label for="reopen-reason" style="display: block; font-weight: 600; font-size: var(--fs-xs); margin-bottom: 4px;">
+                        Reason for Reopening <span style="color: var(--clr-danger);">*</span>
+                    </label>
+                    <textarea id="reopen-reason" required minlength="5" rows="3" placeholder="e.g. The leak resumed after rain yesterday evening (min 5 characters)..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--clr-border); border-radius: var(--radius-md); font-size: var(--fs-sm); font-family: var(--ff-body); outline: none;"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="btn-cancel-reopen">Cancel</button>
+                <button type="button" class="btn-danger" id="btn-confirm-reopen-action" style="background: #E65100;">
+                    <span class="btn-text">Reopen Ticket</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. REJECT COMPLAINT MODAL (Secretary) -->
+    <div id="reject-complaint-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon-badge danger">
+                    <i data-lucide="alert-triangle"></i>
+                </div>
+                <div>
+                    <h3 class="modal-title">Reject Complaint</h3>
+                    <p class="modal-subtitle">State the official reason for ticket rejection</p>
+                </div>
+                <button type="button" class="btn-modal-close" id="btn-close-reject-comp-modal" aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <p>You are marking <strong id="reject-comp-title" style="color: var(--clr-primary);">Complaint</strong> as <strong>Rejected</strong>.</p>
+                <div style="margin-top: var(--sp-4);">
+                    <label for="reject-comp-reason" style="display: block; font-weight: 600; font-size: var(--fs-xs); margin-bottom: 4px;">
+                        Official Rejection Reason <span style="color: var(--clr-danger);">*</span>
+                    </label>
+                    <textarea id="reject-comp-reason" required minlength="5" rows="3" placeholder="e.g. Duplicate issue already logged as ticket #12, or private internal flat dispute..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--clr-border); border-radius: var(--radius-md); font-size: var(--fs-sm); font-family: var(--ff-body); outline: none;"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="btn-cancel-reject-comp">Cancel</button>
+                <button type="button" class="btn-danger" id="btn-confirm-reject-comp-action">
+                    <span class="btn-text">Confirm Rejection</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="../config.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/router.js"></script>
+    <script src="../js/components.js"></script>
+    <script src="../js/cursor.js"></script>
+    <script src="../js/animations.js"></script>
+    <script src="../js/pages/complaints.js?v=2"></script>
+</body>
+
+</html>

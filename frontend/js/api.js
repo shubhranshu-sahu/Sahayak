@@ -209,6 +209,10 @@ const Api = (() => {
         return post(`/secretary/residents/${residentId}/revoke`);
     }
 
+    function reactivateResident(residentId, unitId) {
+        return post(`/secretary/residents/${residentId}/reactivate`, { unitId });
+    }
+
     function validateSocietyCode(code) {
         return get(`/public/validate-code/${encodeURIComponent(code)}`);
     }
@@ -233,6 +237,59 @@ const Api = (() => {
         return put(`/units/${unitId}`, data);
     }
 
+    function getVacantUnits() {
+        return get('/structure/vacant-units');
+    }
+
+    /* ── Phase 2 Complaints Module Helpers ── */
+    function createComplaint(payload) {
+        return post('/complaints', payload);
+    }
+
+    function getMyComplaints(params = {}) {
+        const query = new URLSearchParams();
+        if (params.status) query.set('status', params.status);
+        if (params.page) query.set('page', params.page);
+        if (params.limit) query.set('limit', params.limit);
+        const qs = query.toString() ? `?${query.toString()}` : '';
+        return get(`/complaints/my${qs}`);
+    }
+
+    function getComplaintById(complaintId) {
+        return get(`/complaints/${complaintId}`);
+    }
+
+    function addComplaintReply(complaintId, payload) {
+        return post(`/complaints/${complaintId}/replies`, payload);
+    }
+
+    function confirmComplaintResolution(complaintId, feedback = '') {
+        return post(`/complaints/${complaintId}/confirm-resolved`, { feedback });
+    }
+
+    function reopenComplaint(complaintId, reason) {
+        return post(`/complaints/${complaintId}/reopen`, { reason });
+    }
+
+    function getSecretaryComplaints(params = {}) {
+        const query = new URLSearchParams();
+        if (params.status) query.set('status', params.status);
+        if (params.category) query.set('category', params.category);
+        if (params.search) query.set('search', params.search);
+        if (params.page) query.set('page', params.page);
+        if (params.limit) query.set('limit', params.limit);
+        const qs = query.toString() ? `?${query.toString()}` : '';
+        return get(`/secretary/complaints${qs}`);
+    }
+
+    function updateComplaintStatus(complaintId, payload) {
+        return patch(`/secretary/complaints/${complaintId}/status`, payload);
+    }
+
+    function getComplaintStats() {
+        return get('/secretary/complaints/stats');
+    }
+
     return {
         request,
         get,
@@ -247,11 +304,23 @@ const Api = (() => {
         getDashboardStats,
         getAllResidents,
         revokeResident,
+        reactivateResident,
         validateSocietyCode,
         renameBlock,
         deleteBlock,
         deleteFloor,
         deleteUnit,
         editUnit,
+        getVacantUnits,
+        // Phase 2 Complaints additions
+        createComplaint,
+        getMyComplaints,
+        getComplaintById,
+        addComplaintReply,
+        confirmComplaintResolution,
+        reopenComplaint,
+        getSecretaryComplaints,
+        updateComplaintStatus,
+        getComplaintStats,
     };
 })();
