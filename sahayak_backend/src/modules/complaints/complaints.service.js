@@ -433,3 +433,336 @@ export const reopenComplaint = async (societyId, residentId, complaintId, reason
     connection.release();
   }
 };
+
+/**
+ * 7. Get all complaints for secretary (Search, Filter, Pagination, Summary counts)
+ */
+export const getSecretaryComplaints = async (societyId, queryParams) => {
+  const { status, category, search, page = 1, limit = 20 } = queryParams;
+
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+  const offset = (pageNum - 1) * limitNum;
+
+  // 1. Get summary counts across all statuses
+  const [countsResult] = await pool.execute(
+    `SELECT 
+      COUNT(*) AS total,
+      SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) AS count_open,
+      SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) AS count_in_progress,
+      SUM(CASE WHEN status = 'pending_closure' THEN 1 ELSE 0 END) AS count_pending_closure,
+      SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) AS count_closed,
+      SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS count_rejected
+    FROM complaints
+    WHERE society_id = ?`,
+    [societyId]
+  );
+
+  const cRow = countsResult[0];
+  const counts = {
+    total: Number(cRow.total || 0),
+    open: Number(cRow.count_open || 0),
+    inProgress: Number(cRow.count_in_progress || 0),
+    pendingClosure: Number(cRow.count_pending_closure || 0),
+    closed: Number(cRow.count_closed || 0),
+    rejected: Number(cRow.count_rejected || 0),
+  };
+
+  // 2. Build filtered query
+  let whereConditions = ['c.society_id = ?'];
+  let values = [societyId];
+
+  if (status) {
+    whereConditions.push('c.status = ?');
+    values.push(status);
+  }
+
+  if (category) {
+    whereConditions.push('c.category = ?');
+    values.push(category);
+  }
+
+  if (search && search.trim()) {
+    const s = `%${search.trim()}%`;
+    whereConditions.push('(c.title LIKE ? OR c.description LIKE ? OR u.name LIKE ? OR un.display_label LIKE ?)');
+    values.push(s, s, s, s);
+  }
+
+  const whereClause = `WHERE ${whereConditions.join(' AND ')}`;
+
+  // Filtered total count
+  const [filteredCountResult] = await pool.execute(
+    `SELECT COUNT(*) AS total 
+     FROM complaints c
+     JOIN users u ON c.resident_id = u.id
+     JOIN units un ON c.unit_id = un.id
+     ${whereClause}`,
+    values
+  );
+  const filteredTotal = Number(filteredCountResult[0].total || 0);
+
+  // Fetch complaints
+  const [rows] = await pool.execute(
+    `SELECT 
+      c.id,
+      c.title,
+      c.category,
+      c.category_label,
+      c.status,
+      c.created_at,
+      c.updated_at,
+      u.id AS resident_id,
+      u.name AS resident_name,
+      u.phone AS resident_phone,
+      un.id AS unit_id,
+      un.display_label AS unit_label,
+      un.block_name,
+      un.floor_number,
+      (SELECT COUNT(*) FROM complaint_replies WHERE complaint_id = c.id) AS reply_count
+    FROM complaints c
+    JOIN users u ON c.resident_id = u.id
+    JOIN units un ON c.unit_id = un.id
+    ${whereClause}
+    ORDER BY c.created_at DESC
+    LIMIT ${limitNum} OFFSET ${offset}`,
+    values
+  );
+
+  return {
+    counts,
+    complaints: rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      category: r.category,
+      categoryLabel: r.category_label,
+      status: r.status,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      replyCount: Number(r.reply_count || 0),
+      resident: {
+        id: r.resident_id,
+        name: r.resident_name,
+        phone: r.resident_phone,
+      },
+      unit: {
+        id: r.unit_id,
+        displayLabel: r.unit_label,
+        blockName: r.block_name,
+        floorNumber: r.floor_number,
+      },
+    })),
+    pagination: {
+      page: pageNum,
+      limit: limitNum,
+      total: filteredTotal,
+      totalPages: Math.ceil(filteredTotal / limitNum),
+    },
+  };
+};
+
+/**
+ * 8. Secretary updates complaint status (in_progress, pending_closure, rejected)
+ */
+export const updateComplaintStatus = async (societyId, secretaryId, complaintId, payload) => {
+  const { status, rejection_reason } = payload;
+
+  const validTargetStatuses = ['in_progress', 'pending_closure', 'rejected'];
+  if (!status || !validTargetStatuses.includes(status)) {
+    throw {
+      status: 400,
+      message: `Invalid target status. Secretary can only update to: ${validTargetStatuses.join(', ')}. Direct closure must be confirmed by the resident.`,
+    };
+  }
+
+  let finalRejectionReason = null;
+  if (status === 'rejected') {
+    if (!rejection_reason || typeof rejection_reason !== 'string' || rejection_reason.trim().length < 5) {
+      throw { status: 400, message: 'rejection_reason is required when rejecting a complaint (min 5 characters).' };
+    }
+    finalRejectionReason = rejection_reason.trim();
+  }
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [complaints] = await connection.execute(
+      'SELECT id, status FROM complaints WHERE id = ? AND society_id = ? FOR UPDATE',
+      [complaintId, societyId]
+    );
+
+    if (complaints.length === 0) {
+      throw { status: 404, message: 'Complaint not found.' };
+    }
+
+    const currentStatus = complaints[0].status;
+
+    if (currentStatus === 'closed') {
+      throw { status: 400, message: 'Cannot update status of an already closed complaint.' };
+    }
+    if (currentStatus === 'rejected') {
+      throw { status: 400, message: 'Cannot update status of an already rejected complaint.' };
+    }
+
+    // Update status
+    await connection.execute(
+      'UPDATE complaints SET status = ?, rejection_reason = ? WHERE id = ?',
+      [status, finalRejectionReason, complaintId]
+    );
+
+    // Insert system / secretary note
+    let systemMessage = '';
+    if (status === 'pending_closure') {
+      systemMessage = 'Secretary marked this complaint as Pending Closure. Awaiting resident confirmation.';
+    } else if (status === 'in_progress') {
+      systemMessage = 'Secretary marked this complaint as In Progress.';
+    } else if (status === 'rejected') {
+      systemMessage = `Secretary rejected this complaint. Reason: ${finalRejectionReason}`;
+    }
+
+    await connection.execute(
+      `INSERT INTO complaint_replies (complaint_id, sender_id, sender_role, message)
+       VALUES (?, ?, 'secretary', ?)`,
+      [complaintId, secretaryId, systemMessage]
+    );
+
+    await connection.commit();
+
+    return {
+      complaintId: Number(complaintId),
+      status,
+      rejectionReason: finalRejectionReason,
+    };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+};
+
+/**
+ * 9. Secretary Complaint Analytics & Resolution Time
+ */
+export const getComplaintStats = async (societyId) => {
+  const [statusResult, categoryResult, timeResult, topUnitsResult] = await Promise.all([
+    // Counts by status
+    pool.execute(
+      `SELECT 
+        COUNT(*) AS total,
+        SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) AS count_open,
+        SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) AS count_in_progress,
+        SUM(CASE WHEN status = 'pending_closure' THEN 1 ELSE 0 END) AS count_pending_closure,
+        SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) AS count_closed,
+        SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS count_rejected
+      FROM complaints WHERE society_id = ?`,
+      [societyId]
+    ),
+    // Counts by category
+    pool.execute(
+      `SELECT category, COUNT(*) AS count
+       FROM complaints WHERE society_id = ?
+       GROUP BY category`,
+      [societyId]
+    ),
+    // Resolution time
+    pool.execute(
+      `SELECT AVG(TIMESTAMPDIFF(HOUR, created_at, closed_at)) AS avg_hours
+       FROM complaints WHERE society_id = ? AND status = 'closed' AND closed_at IS NOT NULL`,
+      [societyId]
+    ),
+    // Top units with most complaints
+    pool.execute(
+      `SELECT u.id AS unit_id, u.display_label, COUNT(c.id) AS complaint_count
+       FROM complaints c
+       JOIN units u ON c.unit_id = u.id
+       WHERE c.society_id = ?
+       GROUP BY u.id, u.display_label
+       ORDER BY complaint_count DESC
+       LIMIT 5`,
+      [societyId]
+    ),
+  ]);
+
+  const sRow = statusResult[0][0];
+  const avgHours = timeResult[0][0].avg_hours ? Number(parseFloat(timeResult[0][0].avg_hours).toFixed(1)) : 0;
+  const avgDays = avgHours > 0 ? Number((avgHours / 24).toFixed(1)) : 0;
+
+  const byCategory = {};
+  categoryResult[0].forEach((row) => {
+    byCategory[row.category] = Number(row.count);
+  });
+
+  return {
+    summary: {
+      total: Number(sRow.total || 0),
+      open: Number(sRow.count_open || 0),
+      inProgress: Number(sRow.count_in_progress || 0),
+      pendingClosure: Number(sRow.count_pending_closure || 0),
+      closed: Number(sRow.count_closed || 0),
+      rejected: Number(sRow.count_rejected || 0),
+    },
+    byCategory,
+    performance: {
+      avgResolutionHours: avgHours,
+      avgResolutionDays: avgDays,
+    },
+    topUnits: topUnitsResult[0].map((r) => ({
+      unitId: r.unit_id,
+      displayLabel: r.display_label,
+      complaintCount: Number(r.complaint_count),
+    })),
+  };
+};
+
+/**
+ * Auto-close complaints in 'pending_closure' older than 7 days
+ * (Section C: Auto-Closure Automation)
+ */
+export const autoCloseStaleComplaints = async () => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // 1. Find all stale complaints
+    const [staleComplaints] = await connection.execute(
+      `SELECT id, society_id FROM complaints
+       WHERE status = 'pending_closure'
+         AND updated_at < NOW() - INTERVAL 7 DAY
+       FOR UPDATE`
+    );
+
+    if (staleComplaints.length === 0) {
+      await connection.commit();
+      return 0;
+    }
+
+    const complaintIds = staleComplaints.map((c) => c.id);
+
+    // 2. Bulk update to 'closed'
+    const placeholders = complaintIds.map(() => '?').join(',');
+    await connection.execute(
+      `UPDATE complaints
+       SET status = 'closed', closed_at = NOW()
+       WHERE id IN (${placeholders})`,
+      complaintIds
+    );
+
+    // 3. Insert system replies
+    for (const c of staleComplaints) {
+      await connection.execute(
+        `INSERT INTO complaint_replies (complaint_id, sender_id, sender_role, message)
+         VALUES (?, NULL, 'system', 'Auto-closed after 7 days with no response from resident.')`,
+        [c.id]
+      );
+    }
+
+    await connection.commit();
+    return staleComplaints.length;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+};

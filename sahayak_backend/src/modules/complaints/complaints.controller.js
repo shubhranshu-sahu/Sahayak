@@ -89,3 +89,40 @@ export const reopenComplaint = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getSecretaryComplaints = async (req, res, next) => {
+  try {
+    const data = await complaintsService.getSecretaryComplaints(
+      req.user.societyId,
+      req.query
+    );
+    return sendSuccess(res, 200, 'Society complaints retrieved.', data);
+  } catch (error) {
+    if (error.status) return sendError(res, error.status, error.message);
+    next(error);
+  }
+};
+export const updateComplaintStatus = async (req, res, next) => {
+  try {
+    const data = await complaintsService.updateComplaintStatus(
+      req.user.societyId,
+      req.user.userId,
+      req.params.id,
+      req.body
+    );
+    return sendSuccess(res, 200, 'Complaint status updated successfully.', data);
+  } catch (error) {
+    if (error.status) return sendError(res, error.status, error.message);
+    next(error);
+  }
+};
+
+export const getComplaintStats = async (req, res, next) => {
+  try {
+    const data = await complaintsService.getComplaintStats(req.user.societyId);
+    return sendSuccess(res, 200, 'Complaint analytics retrieved.', data);
+  } catch (error) {
+    if (error.status) return sendError(res, error.status, error.message);
+    next(error);
+  }
+};

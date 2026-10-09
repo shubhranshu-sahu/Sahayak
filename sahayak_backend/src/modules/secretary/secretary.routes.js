@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as secretaryController from './secretary.controller.js';
 import { authenticateJWT } from '../../middlewares/auth.middleware.js';
 import { authorizeRoles } from '../../middlewares/role.middleware.js';
+import * as complaintsController from '../complaints/complaints.controller.js';
 
 const router = Router();
 
@@ -23,5 +24,10 @@ router.get('/residents/all', secretaryController.getAllResidents);
 
 // Dashboard
 router.get('/dashboard/stats', secretaryController.getDashboardStats);
+
+// Complaints Management (Secretary)
+router.get('/complaints/stats', complaintsController.getComplaintStats);
+router.get('/complaints', complaintsController.getSecretaryComplaints);
+router.patch('/complaints/:id/status', complaintsController.updateComplaintStatus);
 
 export default router;
