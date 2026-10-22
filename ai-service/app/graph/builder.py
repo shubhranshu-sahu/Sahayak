@@ -2,10 +2,13 @@ import logging
 from typing import Optional
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.prebuilt import ToolNode
+
 from app.graph.state import AgentState
 from app.graph.nodes.call_model import call_model
 from app.graph.nodes.summarize import summarize_node
-from app.graph.edges.routers import route_start
+from app.graph.edges.routers import route_start, route_after_model
+from app.graph.tools import get_all_tools
 from app.database.mongodb import get_checkpointer
 
 logger = logging.getLogger(__name__)
@@ -16,27 +19,36 @@ _graph: Optional[CompiledStateGraph] = None
 
 def build_graph() -> CompiledStateGraph:
     """
-    Construct, wire, and compile the Sahayak LangGraph agent graph.
+    Construct, wire, and compile the Sahayak LangGraph agent graph with tool calling.
 
-    Graph Architecture:
+    Phase 2 Graph Topology:
     1. START -> route_start (conditional edge)
-       - If len(messages) > 30 -> summarize_node
+       - If len(messages) > 30 -> summarize_node -> call_model
        - Else -> call_model
-    2. summarize_node -> call_model (normal edge)
-    3. call_model -> END (normal edge)
+    2. call_model -> route_after_model (conditional edge)
+       - If AIMessage has tool_calls -> tool_executor (ToolNode)
+       - Else -> END (final text response)
+    3. tool_executor -> call_model (circular loop edge)
+       - Feeds tool execution results (ToolMessages) back to Gemini
+         so it can reason further or form the final response.
 
     Persistence:
-    State is persisted automatically to the 'agent_threads' MongoDB collection
-    via the MongoDBSaver checkpointer.
+    State (sliding window + summary) is automatically checkpointed to MongoDB
+    in the 'agent_threads' collection via MongoDBSaver.
     """
-    logger.info("Building Sahayak LangGraph agent graph...")
+    logger.info("Building Sahayak LangGraph agent graph (Phase 2: with tools)...")
     builder = StateGraph(AgentState)
 
-    # 1. Register Nodes
+    # 1. Collect all registered agent tools
+    tools = get_all_tools()
+    logger.info("Registered %d agent tools for LangGraph ToolNode.", len(tools))
+
+    # 2. Register Nodes
     builder.add_node("call_model", call_model)
     builder.add_node("summarize_node", summarize_node)
+    builder.add_node("tool_executor", ToolNode(tools))
 
-    # 2. Add Conditional Edge from START
+    # 3. START -> route_start (Summarization threshold check)
     builder.add_conditional_edges(
         START,
         route_start,
@@ -46,18 +58,27 @@ def build_graph() -> CompiledStateGraph:
         },
     )
 
-    # 3. Add Edges
-    # After summarizing, immediately proceed to call_model to answer the user's message
+    # 4. summarize_node -> call_model
     builder.add_edge("summarize_node", "call_model")
 
-    # After model answers, the invocation turn is complete
-    builder.add_edge("call_model", END)
+    # 5. call_model -> route_after_model (Tool calling loop check)
+    builder.add_conditional_edges(
+        "call_model",
+        route_after_model,
+        {
+            "tool_executor": "tool_executor",
+            "end": END,
+        },
+    )
 
-    # 4. Compile with MongoDB checkpointer persistence
+    # 6. tool_executor -> call_model (Loop edge for multi-step reasoning)
+    builder.add_edge("tool_executor", "call_model")
+
+    # 7. Compile with MongoDB checkpointer persistence
     checkpointer = get_checkpointer()
     compiled_graph = builder.compile(checkpointer=checkpointer)
 
-    logger.info("Sahayak LangGraph agent compiled successfully.")
+    logger.info("Sahayak LangGraph agent compiled successfully with tool loop.")
     return compiled_graph
 
 

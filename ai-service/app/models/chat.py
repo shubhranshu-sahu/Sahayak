@@ -41,6 +41,10 @@ class ChatRequest(BaseModel):
     """
     message: str = Field(..., min_length=1, description="Message sent by the secretary")
     secretary_id: int = Field(default=1, description="ID of the secretary sending the message")
+    society_id: Optional[int] = Field(
+        default=None,
+        description="ID of the society for multi-tenant tool scoping and database operations",
+    )
     society_name: Optional[str] = Field(default="the Society", description="Name of the society for context")
     secretary_name: Optional[str] = Field(default="Secretary", description="Name of the secretary for greeting")
     thread_id: Optional[str] = Field(
