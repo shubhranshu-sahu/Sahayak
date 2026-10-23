@@ -1,3 +1,4 @@
+from typing import List
 from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -9,14 +10,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 class Settings(BaseSettings):
     """Application configuration loaded from environment variables and .env file."""
 
-    # Google Gemini LLM Settings
+    # Google Gemini LLM Settings (Multi-Key & Multi-Model Failover)
+    GEMINI_API_KEYS: str = Field(
+        default="",
+        description="Comma-separated list of Gemini API keys from different accounts",
+    )
+    GEMINI_MODELS: str = Field(
+        default="gemini-3.5-flash,gemini-3.5-flash-lite,gemini-flash-lite-latest,gemini-3.8-flash,gemini-flash-latest",
+        description="Comma-separated list of Gemini models in priority failover order",
+    )
+
+    # Backward compatibility: Single key & model fallback
     GEMINI_API_KEY: str = Field(
         default="",
-        description="Google Gemini API key required for LLM calls",
+        description="Single Gemini API key fallback if GEMINI_API_KEYS is not set",
     )
     GEMINI_MODEL: str = Field(
-        default="gemini-1.5-flash",
-        description="Gemini model name to use",
+        default="gemini-3.5-flash",
+        description="Single Gemini model fallback if GEMINI_MODELS is not set",
     )
 
     # MongoDB Settings
@@ -102,9 +113,57 @@ class Settings(BaseSettings):
     )
 
     @property
+    def api_keys(self) -> List[str]:
+        """
+        Parse comma-separated API keys into a sanitized, deduplicated list.
+        Falls back to GEMINI_API_KEY if GEMINI_API_KEYS is empty.
+        Filters out empty strings and placeholder values.
+        """
+        raw_keys = [
+            k.strip().strip('"').strip("'")
+            for k in self.GEMINI_API_KEYS.split(",")
+            if k.strip()
+        ]
+        # Filter placeholders
+        valid_keys = [k for k in raw_keys if k and k != "your_gemini_api_key_here"]
+
+        if not valid_keys and self.GEMINI_API_KEY and self.GEMINI_API_KEY != "your_gemini_api_key_here":
+            valid_keys = [self.GEMINI_API_KEY.strip().strip('"').strip("'")]
+
+        # Deduplicate while preserving priority order
+        return list(dict.fromkeys(valid_keys))
+
+    @property
+    def models(self) -> List[str]:
+        """
+        Parse comma-separated model names into a list in priority order.
+        Falls back to GEMINI_MODEL or default model list if empty.
+        """
+        raw_models = [
+            m.strip().strip('"').strip("'")
+            for m in self.GEMINI_MODELS.split(",")
+            if m.strip()
+        ]
+        if not raw_models and self.GEMINI_MODEL:
+            raw_models = [self.GEMINI_MODEL.strip().strip('"').strip("'")]
+
+        # Fallback default if completely empty
+        if not raw_models:
+            raw_models = [
+                "gemini-3.5-flash",
+                "gemini-3.5-flash-lite",
+                "gemini-flash-lite-latest",
+                "gemini-3.8-flash",
+                "gemini-flash-latest",
+            ]
+
+        # Deduplicate while preserving priority order
+        return list(dict.fromkeys(raw_models))
+
+    @property
     def is_gemini_configured(self) -> bool:
-        """Helper to verify if a non-placeholder Gemini API key is configured."""
-        return bool(self.GEMINI_API_KEY and self.GEMINI_API_KEY != "your_gemini_api_key_here")
+        """Helper to verify if at least one valid Gemini API key is configured."""
+        return len(self.api_keys) > 0
 
 
 # Global singleton settings instance
