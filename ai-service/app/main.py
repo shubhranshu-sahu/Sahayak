@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.config import settings
 from app.database.mongodb import init_db, close_db, get_async_client
+from app.database.mysql import init_mysql, close_mysql, get_mysql_pool
 from app.routers.chat import router as chat_router
 
 # Setup structured logging
@@ -19,20 +20,34 @@ logger = logging.getLogger("sahayak-ai")
 async def lifespan(app: FastAPI):
     """
     FastAPI lifespan context manager.
-    Handles startup (DB connection, index initialization) and graceful shutdown.
+    Handles startup (MongoDB & MySQL connection pool initialization) and graceful shutdown.
     """
     logger.info("Starting Sahayak AI Service (%s mode)...", settings.ENVIRONMENT)
+
+    # 1. Initialize MongoDB
     try:
         await init_db()
-        logger.info("Database initialized successfully.")
+        logger.info("MongoDB initialized successfully.")
     except Exception as e:
-        logger.error("Failed to initialize database during startup: %s", e, exc_info=True)
-        # Note: In development we allow startup to proceed so health endpoint can report the error
+        logger.error("Failed to initialize MongoDB during startup: %s", e, exc_info=True)
+
+    # 2. Initialize MySQL (for direct tool execution)
+    try:
+        await init_mysql()
+        logger.info("MySQL connection pool initialized successfully.")
+    except Exception as e:
+        logger.warning(
+            "Could not connect to MySQL during startup: %s. "
+            "(Tools requiring MySQL will fail until valid MYSQL_* credentials are provided in .env)",
+            e,
+        )
 
     yield
 
+    # Graceful Shutdown
     logger.info("Shutting down Sahayak AI Service...")
     await close_db()
+    await close_mysql()
     logger.info("Shutdown complete.")
 
 
@@ -40,7 +55,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Sahayak AI Service",
     description="LangGraph + Gemini powered AI management assistant for society secretaries",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -72,6 +87,7 @@ async def root():
     return {
         "service": "Sahayak AI Service",
         "status": "running",
+        "version": "0.2.0",
         "docs_url": "/docs",
         "health_url": "/health",
     }
@@ -81,28 +97,47 @@ async def root():
 async def health_check():
     """
     Health check endpoint.
-    Verifies service status, database connectivity to MongoDB, and Gemini configuration.
+    Verifies service status, database connectivity to MongoDB and MySQL, and Gemini configuration.
     """
-    db_status = "unknown"
+    # 1. Check MongoDB
+    mongo_status = "unknown"
     try:
         client = get_async_client()
         await client.admin.command("ping")
-        db_status = "connected"
+        mongo_status = "connected"
     except Exception as e:
-        db_status = f"unhealthy: {str(e)}"
+        mongo_status = f"unhealthy: {str(e)}"
 
-    is_healthy = db_status == "connected"
+    # 2. Check MySQL
+    mysql_status = "unknown"
+    try:
+        pool = await get_mysql_pool()
+        async with pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute("SELECT 1 AS ping")
+        mysql_status = "connected"
+    except Exception as e:
+        mysql_status = f"unhealthy: {str(e)}"
+
+    is_healthy = mongo_status == "connected"
     response_payload = {
         "status": "healthy" if is_healthy else "degraded",
         "service": "sahayak-ai",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "environment": settings.ENVIRONMENT,
         "database": {
-            "status": db_status,
-            "name": settings.MONGODB_DB_NAME,
+            "mongodb": {
+                "status": mongo_status,
+                "name": settings.MONGODB_DB_NAME,
+            },
+            "mysql": {
+                "status": mysql_status,
+                "database": settings.MYSQL_DATABASE,
+                "host": settings.MYSQL_HOST,
+            },
         },
         "gemini": {
-            "configured": settings.is_gemini_configured, 
+            "configured": settings.is_gemini_configured,
             "model": settings.GEMINI_MODEL,
         },
     }

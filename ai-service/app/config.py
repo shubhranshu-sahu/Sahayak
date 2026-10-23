@@ -41,6 +41,32 @@ class Settings(BaseSettings):
         description="Permanent full chat history collection for UI display",
     )
 
+    # MySQL Settings (for agent tools — direct DB access)
+    MYSQL_HOST: str = Field(
+        default="localhost",
+        description="MySQL host for agent tool execution",
+    )
+    MYSQL_PORT: int = Field(
+        default=3306,
+        description="MySQL port",
+    )
+    MYSQL_USER: str = Field(
+        default="root",
+        description="MySQL user",
+    )
+    MYSQL_PASSWORD: str = Field(
+        default="",
+        description="MySQL password",
+    )
+    MYSQL_DATABASE: str = Field(
+        default="sahayak_db",
+        description="MySQL database name",
+    )
+    MYSQL_POOL_SIZE: int = Field(
+        default=5,
+        description="MySQL connection pool size",
+    )
+
     # Summarization Configuration
     # Trigger summarization when window exceeds 30 messages
     # Keep the last 5 messages as conversational overlap
