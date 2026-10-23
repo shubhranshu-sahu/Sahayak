@@ -92,6 +92,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (chatWorkspace) chatWorkspace.style.display = 'flex';
     if (window.lucide) lucide.createIcons();
 
+    // Fix Bug-5: Scroll down to newest message once container is visible and rendered
+    forceScrollBottom();
+
     // Focus input field or process incoming ?prompt= query param
     const urlParams = new URLSearchParams(window.location.search);
     const initialPrompt = urlParams.get('prompt');
@@ -186,7 +189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
                     });
 
-                    scrollToBottom();
+                    forceScrollBottom();
                 } else {
                     if (welcomeState) welcomeState.style.display = 'block';
                 }
@@ -251,12 +254,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             timestamp: new Date()
         });
         messagesCount++;
-        scrollToBottom();
+        forceScrollBottom();
 
-        // 2. Prepare Assistant Streaming Bubble
+        // 2. Prepare Assistant Streaming Bubble with Thinking & Progress UI (Bug-4)
         const assistantPlaceholder = createAssistantStreamingPlaceholder();
         messagesList.appendChild(assistantPlaceholder.row);
-        scrollToBottom();
+        forceScrollBottom();
 
         // 3. Initiate SSE Streaming
         isStreaming = true;
@@ -265,6 +268,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentAbortController = new AbortController();
 
         let accumulatedContent = '';
+        let firstTokenReceived = false;
+        let stepCounter = 0;
+        let currentActiveStepId = 'step-initial';
+        const stepsRecord = [];
 
         try {
             await Api.aiStreamChat({
@@ -274,32 +281,103 @@ document.addEventListener('DOMContentLoaded', async () => {
                 signal: currentAbortController.signal,
 
                 onStart: (startEvent) => {
-                    // Start event received
+                    assistantPlaceholder.setModelTag('Thinking...');
+                },
+
+                onStatus: (statusEvent) => {
+                    const msg = statusEvent.message || 'Processing request...';
+                    assistantPlaceholder.addStatusNotice(msg);
+                    if (statusEvent.model) {
+                        assistantPlaceholder.setModelTag(statusEvent.model);
+                    }
+                    scrollToBottom();
+                },
+
+                onToolStart: (toolEvent) => {
+                    // Mark previous step as completed
+                    if (currentActiveStepId) {
+                        assistantPlaceholder.completeStep(currentActiveStepId);
+                        const prevRec = stepsRecord.find(s => s.id === currentActiveStepId);
+                        if (prevRec) prevRec.status = 'completed';
+                    }
+
+                    stepCounter++;
+                    const toolName = toolEvent.tool || 'operation';
+                    const toolInfo = getToolInfo(toolName, toolEvent.args || {});
+                    const stepId = `tool-step-${stepCounter}`;
+                    currentActiveStepId = stepId;
+
+                    stepsRecord.push({
+                        id: stepId,
+                        tool: toolName,
+                        title: toolInfo.title,
+                        desc: toolInfo.desc,
+                        icon: toolInfo.icon,
+                        status: 'running'
+                    });
+
+                    assistantPlaceholder.addStep({
+                        id: stepId,
+                        title: toolInfo.title,
+                        desc: toolInfo.desc,
+                        icon: toolInfo.icon,
+                        stepNumber: stepCounter
+                    });
+
+                    assistantPlaceholder.setModelTag(`${toolInfo.title.split(' ')[0]}...`);
+                    scrollToBottom();
+                },
+
+                onToolResult: (resultEvent) => {
+                    if (currentActiveStepId) {
+                        assistantPlaceholder.completeStep(currentActiveStepId);
+                        const rec = stepsRecord.find(s => s.id === currentActiveStepId);
+                        if (rec) rec.status = 'completed';
+                        currentActiveStepId = null;
+                    }
+                    assistantPlaceholder.setModelTag('Analyzing data...');
+                    scrollToBottom();
                 },
 
                 onToken: (token) => {
+                    if (!firstTokenReceived) {
+                        firstTokenReceived = true;
+                        if (currentActiveStepId) {
+                            assistantPlaceholder.completeStep(currentActiveStepId);
+                            const rec = stepsRecord.find(s => s.id === currentActiveStepId);
+                            if (rec) rec.status = 'completed';
+                            currentActiveStepId = null;
+                        }
+                        assistantPlaceholder.startStreamingTokens(stepsRecord.length);
+                    }
+
                     accumulatedContent += token;
-                    assistantPlaceholder.bubble.innerHTML = renderMarkdown(accumulatedContent) + '<span class="streaming-cursor"></span>';
+                    assistantPlaceholder.appendTokenContent(renderMarkdown(accumulatedContent));
                     scrollToBottom();
                 },
 
                 onDone: (doneEvent) => {
-                    finalizeAssistantBubble(assistantPlaceholder, accumulatedContent, doneEvent.message_id);
+                    finalizeAssistantBubble(assistantPlaceholder, accumulatedContent, doneEvent.message_id, stepsRecord);
                 },
 
                 onError: (err) => {
                     console.error('[Chat] Stream error:', err);
+                    if (currentActiveStepId) {
+                        assistantPlaceholder.failStep(currentActiveStepId, err.message);
+                        const rec = stepsRecord.find(s => s.id === currentActiveStepId);
+                        if (rec) rec.status = 'failed';
+                    }
                     const errorMsg = accumulatedContent
                         ? accumulatedContent + `\n\n*(Stream interrupted: ${err.message})*`
                         : `I encountered an issue connecting to the AI core: ${err.message}. Please ensure the Python service is running on port 8001.`;
-                    finalizeAssistantBubble(assistantPlaceholder, errorMsg);
+                    finalizeAssistantBubble(assistantPlaceholder, errorMsg, null, stepsRecord);
                     Toast.error('AI response was interrupted.');
                 }
             });
         } catch (err) {
             console.error('[Chat] Send message exception:', err);
             if (err.name !== 'AbortError') {
-                finalizeAssistantBubble(assistantPlaceholder, `Error: ${err.message}`);
+                finalizeAssistantBubble(assistantPlaceholder, `Error: ${err.message}`, null, stepsRecord);
                 Toast.error('Could not reach Sahayak AI service.');
             }
         } finally {
@@ -385,6 +463,125 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (window.lucide) lucide.createIcons({ nodes: [row] });
     }
 
+    // ════════════════════════════════════════════════════════
+    // Tool Metadata & Human-Readable Labels (Bug-4)
+    // ════════════════════════════════════════════════════════
+    const TOOL_META = {
+        get_society_info: {
+            title: 'Checking society configuration',
+            desc: 'Fetching society details & settings',
+            icon: 'building'
+        },
+        get_society_structure: {
+            title: 'Loading building layout',
+            desc: 'Retrieving blocks, floors & apartments breakdown',
+            icon: 'layers'
+        },
+        get_dashboard_stats: {
+            title: 'Loading dashboard metrics',
+            desc: 'Fetching occupancy, units & resident stats',
+            icon: 'bar-chart-2'
+        },
+        get_residents_list: {
+            title: 'Querying resident directory',
+            desc: 'Retrieving registered residents',
+            icon: 'users'
+        },
+        add_blocks: {
+            title: 'Creating building blocks',
+            desc: 'Registering new blocks',
+            icon: 'plus-square'
+        },
+        add_floors: {
+            title: 'Adding floors to block',
+            desc: 'Configuring floor structure',
+            icon: 'layers'
+        },
+        add_units: {
+            title: 'Generating apartment units',
+            desc: 'Creating residential apartments',
+            icon: 'home'
+        },
+        approve_resident: {
+            title: 'Approving resident registration',
+            desc: 'Validating and granting resident access',
+            icon: 'user-check'
+        },
+        reject_resident: {
+            title: 'Rejecting resident application',
+            desc: 'Processing rejection notice',
+            icon: 'user-x'
+        },
+        revoke_resident: {
+            title: 'Revoking resident access',
+            desc: 'Deactivating resident membership',
+            icon: 'shield-alert'
+        },
+        reactivate_resident: {
+            title: 'Reactivating resident account',
+            desc: 'Restoring apartment access',
+            icon: 'user-plus'
+        },
+        rename_block: {
+            title: 'Renaming block',
+            desc: 'Updating block identifier',
+            icon: 'edit-3'
+        },
+        delete_block: {
+            title: 'Removing building block',
+            desc: 'Deleting block from society',
+            icon: 'trash-2'
+        },
+        delete_floor: {
+            title: 'Removing floor',
+            desc: 'Deleting floor level & apartments',
+            icon: 'trash'
+        },
+        edit_unit: {
+            title: 'Editing unit details',
+            desc: 'Updating unit specifications',
+            icon: 'edit'
+        },
+        delete_unit: {
+            title: 'Removing apartment unit',
+            desc: 'Deleting apartment record',
+            icon: 'trash'
+        },
+        update_society_info: {
+            title: 'Updating society profile',
+            desc: 'Saving updated settings',
+            icon: 'save'
+        }
+    };
+
+    function getToolInfo(toolName, args = {}) {
+        const base = TOOL_META[toolName] || {
+            title: (toolName || 'operation').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+            desc: 'Executing specialized assistant operation',
+            icon: 'cpu'
+        };
+
+        let customDesc = base.desc;
+        if (toolName === 'add_blocks' && args.block_names) {
+            const names = Array.isArray(args.block_names) ? args.block_names.join(', ') : args.block_names;
+            customDesc = `Adding: ${names}`;
+        } else if (toolName === 'rename_block' && args.new_name) {
+            customDesc = `Renaming to: ${args.new_name}`;
+        } else if (toolName === 'get_residents_list' && args.status) {
+            customDesc = `Filter: ${args.status} residents`;
+        } else if (args.block_name) {
+            customDesc = `${base.desc} for ${args.block_name}`;
+        } else if (args.resident_name) {
+            customDesc = `${base.desc} for ${args.resident_name}`;
+        }
+
+        return {
+            title: base.title,
+            desc: customDesc,
+            icon: base.icon
+        };
+    }
+
     function createAssistantStreamingPlaceholder() {
         const row = document.createElement('div');
         row.className = 'message-row assistant';
@@ -398,6 +595,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <span class="model-tag" style="font-size: 9px; padding: 1px 6px;">Thinking...</span>
                 </div>
                 <div class="message-bubble">
+                    <div class="ai-thought-container" id="streaming-thought-container">
+                        <div class="ai-thought-header">
+                            <div class="ai-thought-header-left">
+                                <span class="ai-thought-pulse-dot"></span>
+                                <span class="ai-thought-title">Thinking & Working</span>
+                            </div>
+                            <span class="ai-thought-step-counter">Starting</span>
+                        </div>
+                        <div class="ai-thought-steps-list">
+                            <div class="ai-step-item active" id="step-initial">
+                                <div class="ai-step-icon-wrapper">
+                                    <span class="ai-step-spinner"></span>
+                                </div>
+                                <div class="ai-step-text-col">
+                                    <div class="ai-step-title">Analyzing request...</div>
+                                    <div class="ai-step-desc">Understanding context & planning actions</div>
+                                </div>
+                                <span class="ai-step-badge running">Active</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ai-stream-response" style="display: none;"></div>
                     <span class="streaming-cursor"></span>
                 </div>
                 <div class="message-meta-bar">
@@ -409,16 +628,154 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (window.lucide) lucide.createIcons({ nodes: [row] });
         const bubble = row.querySelector('.message-bubble');
         const metaBar = row.querySelector('.message-meta-bar');
-        return { row, bubble, metaBar };
+        const thoughtContainer = row.querySelector('.ai-thought-container');
+        const stepsList = row.querySelector('.ai-thought-steps-list');
+        const stepCounter = row.querySelector('.ai-thought-step-counter');
+        const streamResponse = row.querySelector('.ai-stream-response');
+        const cursor = row.querySelector('.streaming-cursor');
+        const modelTag = row.querySelector('.model-tag');
+
+        return {
+            row,
+            bubble,
+            metaBar,
+            thoughtContainer,
+            stepsList,
+            stepCounter,
+            streamResponse,
+            cursor,
+            modelTag,
+
+            setModelTag(text) {
+                if (modelTag) modelTag.textContent = text;
+            },
+
+            addStatusNotice(message) {
+                if (!stepsList) return;
+                const notice = document.createElement('div');
+                notice.className = 'ai-status-notice';
+                notice.innerHTML = `
+                    <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                    <span>${escapeHtml(message)}</span>
+                `;
+                stepsList.appendChild(notice);
+                if (window.lucide) lucide.createIcons({ nodes: [notice] });
+            },
+
+            addStep({ id, title, desc, icon, stepNumber }) {
+                if (!stepsList) return;
+                if (stepCounter) stepCounter.textContent = `Step ${stepNumber}`;
+
+                const step = document.createElement('div');
+                step.className = 'ai-step-item active';
+                step.id = id;
+                step.innerHTML = `
+                    <div class="ai-step-icon-wrapper">
+                        <span class="ai-step-spinner"></span>
+                    </div>
+                    <div class="ai-step-text-col">
+                        <div class="ai-step-title">${escapeHtml(title)}</div>
+                        <div class="ai-step-desc">${escapeHtml(desc)}</div>
+                    </div>
+                    <span class="ai-step-badge running">Running</span>
+                `;
+                stepsList.appendChild(step);
+            },
+
+            completeStep(id) {
+                const step = document.getElementById(id);
+                if (!step) return;
+                step.classList.remove('active');
+                step.classList.add('completed');
+                const iconWrapper = step.querySelector('.ai-step-icon-wrapper');
+                if (iconWrapper) {
+                    iconWrapper.innerHTML = '<i data-lucide="check" style="width: 13px; height: 13px;"></i>';
+                    if (window.lucide) lucide.createIcons({ nodes: [iconWrapper] });
+                }
+                const badge = step.querySelector('.ai-step-badge');
+                if (badge) {
+                    badge.className = 'ai-step-badge done';
+                    badge.textContent = 'Done';
+                }
+            },
+
+            failStep(id, errMsg) {
+                const step = document.getElementById(id);
+                if (!step) return;
+                step.classList.remove('active');
+                step.classList.add('failed');
+                const iconWrapper = step.querySelector('.ai-step-icon-wrapper');
+                if (iconWrapper) {
+                    iconWrapper.innerHTML = '<i data-lucide="alert-circle" style="width: 13px; height: 13px;"></i>';
+                    if (window.lucide) lucide.createIcons({ nodes: [iconWrapper] });
+                }
+                const badge = step.querySelector('.ai-step-badge');
+                if (badge) {
+                    badge.className = 'ai-step-badge failed';
+                    badge.textContent = 'Error';
+                }
+            },
+
+            startStreamingTokens(toolStepsCount) {
+                if (toolStepsCount === 0) {
+                    if (thoughtContainer) thoughtContainer.style.display = 'none';
+                } else {
+                    if (stepCounter) stepCounter.textContent = `${toolStepsCount} Done`;
+                    const pulseDot = thoughtContainer ? thoughtContainer.querySelector('.ai-thought-pulse-dot') : null;
+                    if (pulseDot) pulseDot.style.display = 'none';
+                    const titleEl = thoughtContainer ? thoughtContainer.querySelector('.ai-thought-title') : null;
+                    if (titleEl) titleEl.textContent = 'Actions & Reasoning Completed';
+                    if (thoughtContainer) thoughtContainer.style.opacity = '0.9';
+                }
+                if (modelTag) modelTag.textContent = 'AI';
+                if (streamResponse) streamResponse.style.display = 'block';
+            },
+
+            appendTokenContent(parsedHtml) {
+                if (streamResponse) {
+                    streamResponse.innerHTML = parsedHtml;
+                }
+            }
+        };
     }
 
-    function finalizeAssistantBubble(placeholder, fullContent, messageId) {
+    function finalizeAssistantBubble(placeholder, fullContent, messageId, stepsRecord = []) {
         if (!placeholder || !placeholder.bubble) return;
 
-        // Render full sanitized markdown
-        placeholder.bubble.innerHTML = renderMarkdown(fullContent);
+        let html = '';
+        if (stepsRecord && stepsRecord.length > 0) {
+            const completedCount = stepsRecord.filter(s => s.status === 'completed').length;
+            html += `
+                <details class="ai-thought-accordion">
+                    <summary class="ai-thought-summary">
+                        <div class="ai-thought-summary-left">
+                            <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--ai-purple);"></i>
+                            <span>Completed ${completedCount} action${completedCount === 1 ? '' : 's'} & reasoning</span>
+                        </div>
+                        <i data-lucide="chevron-down" class="ai-thought-accordion-arrow"></i>
+                    </summary>
+                    <div class="ai-thought-accordion-body">
+                        ${stepsRecord.map(s => `
+                            <div class="ai-step-item ${s.status === 'completed' ? 'completed' : 'failed'}">
+                                <div class="ai-step-icon-wrapper">
+                                    <i data-lucide="${s.status === 'completed' ? 'check' : 'alert-circle'}" style="width: 13px; height: 13px;"></i>
+                                </div>
+                                <div class="ai-step-text-col">
+                                    <div class="ai-step-title">${escapeHtml(s.title)}</div>
+                                    <div class="ai-step-desc">${escapeHtml(s.desc)}</div>
+                                </div>
+                                <span class="ai-step-badge ${s.status === 'completed' ? 'done' : 'failed'}">${s.status === 'completed' ? 'Done' : 'Failed'}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </details>
+            `;
+        }
 
-        // Update tag
+        html += `<div class="ai-stream-response">${renderMarkdown(fullContent)}</div>`;
+        placeholder.bubble.innerHTML = html;
+
+        // Reset model tag to AI
         const senderTag = placeholder.row.querySelector('.model-tag');
         if (senderTag) senderTag.textContent = 'AI';
 
@@ -441,10 +798,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 });
             }
-            if (window.lucide) lucide.createIcons({ nodes: [placeholder.metaBar] });
         }
 
-        scrollToBottom();
+        if (window.lucide) lucide.createIcons({ nodes: [placeholder.row] });
+        forceScrollBottom();
     }
 
     function renderMarkdown(rawText) {
@@ -490,8 +847,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             .replace(/'/g, '&#039;');
     }
 
-    function scrollToBottom() {
-        messagesList.scrollTop = messagesList.scrollHeight;
+    function scrollToBottom(behavior = 'auto') {
+        if (!messagesList) return;
+        if (behavior === 'smooth') {
+            messagesList.scrollTo({ top: messagesList.scrollHeight, behavior: 'smooth' });
+        } else {
+            messagesList.scrollTop = messagesList.scrollHeight;
+        }
+    }
+
+    function forceScrollBottom() {
+        scrollToBottom();
+        requestAnimationFrame(() => {
+            scrollToBottom();
+            setTimeout(scrollToBottom, 50);
+            setTimeout(scrollToBottom, 150);
+        });
     }
 
     // ════════════════════════════════════════════════════════
@@ -504,7 +875,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     btnScrollBottom.addEventListener('click', () => {
-        scrollToBottom();
+        scrollToBottom('smooth');
     });
 
     // ════════════════════════════════════════════════════════
@@ -517,6 +888,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadHistory();
         if (iconRefreshHistory) iconRefreshHistory.classList.remove('spin-anim');
         btnRefreshHistory.disabled = false;
+        forceScrollBottom();
         Toast.success('Conversation synced with database');
     });
 
@@ -526,6 +898,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await checkServiceHealth();
         if (isAiServiceOnline) {
             await loadHistory();
+            forceScrollBottom();
             Toast.success('AI Service is now online!');
         } else {
             Toast.error('Service still unreachable on port 8001');

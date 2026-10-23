@@ -107,7 +107,7 @@ const Api = (() => {
 
     /**
      * Stream response from AI Service via Server-Sent Events (SSE)
-     * @param {object} params - { message, society_name, secretary_name, onStart, onToken, onDone, onError, signal }
+     * @param {object} params - { message, society_name, secretary_name, onStart, onToken, onDone, onError, onToolStart, onToolResult, onStatus, signal }
      */
     async function aiStreamChat({
         message,
@@ -117,6 +117,9 @@ const Api = (() => {
         onToken = null,
         onDone = null,
         onError = null,
+        onToolStart = null,
+        onToolResult = null,
+        onStatus = null,
         signal = null,
     }) {
         const token = localStorage.getItem(CONFIG.TOKEN_KEY);
@@ -146,7 +149,7 @@ const Api = (() => {
                 try {
                     const errJson = await res.json();
                     errorMsg = errJson.detail || errJson.message || errorMsg;
-                } catch (_) {}
+                } catch (_) { }
                 throw new Error(errorMsg);
             }
 
@@ -173,6 +176,12 @@ const Api = (() => {
                         const event = JSON.parse(jsonStr);
                         if (event.type === 'start') {
                             if (onStart) onStart(event);
+                        } else if (event.type === 'status') {
+                            if (onStatus) onStatus(event);
+                        } else if (event.type === 'tool_start') {
+                            if (onToolStart) onToolStart(event);
+                        } else if (event.type === 'tool_result') {
+                            if (onToolResult) onToolResult(event);
                         } else if (event.type === 'token') {
                             if (onToken) onToken(event.content);
                         } else if (event.type === 'done') {
