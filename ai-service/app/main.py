@@ -7,6 +7,7 @@ from app.config import settings
 from app.database.mongodb import init_db, close_db, get_async_client
 from app.database.mysql import init_mysql, close_mysql, get_mysql_pool
 from app.routers.chat import router as chat_router
+from app.services.llm_provider import get_llm_provider
 
 # Setup structured logging
 logging.basicConfig(
@@ -120,6 +121,8 @@ async def health_check():
         mysql_status = f"unhealthy: {str(e)}"
 
     is_healthy = mongo_status == "connected"
+    provider = get_llm_provider()
+
     response_payload = {
         "status": "healthy" if is_healthy else "degraded",
         "service": "sahayak-ai",
@@ -138,7 +141,10 @@ async def health_check():
         },
         "gemini": {
             "configured": settings.is_gemini_configured,
-            "model": settings.GEMINI_MODEL,
+            "active_model": provider.current_model,
+            "models": settings.models,
+            "total_keys": len(settings.api_keys),
+            "active_key": provider.current_key_masked,
         },
     }
 

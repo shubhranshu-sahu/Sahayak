@@ -2,8 +2,8 @@ import logging
 from typing import Any, Dict, List, Sequence
 from langchain_core.messages import BaseMessage, HumanMessage, RemoveMessage
 from app.config import settings
-from app.graph.nodes.call_model import get_llm
 from app.graph.state import AgentState
+from app.services.llm_provider import get_llm_provider
 
 logger = logging.getLogger(__name__)
 
@@ -72,9 +72,13 @@ async def summarize_node(state: AgentState) -> Dict[str, Any]:
             f"Capture all key facts, complaints, resident names, unit numbers, decisions, and action items."
         )
 
-    # Call Gemini to get updated summary
-    llm = get_llm(temperature=0.3)  # Lower temperature for accurate summarization
-    response = await llm.ainvoke([HumanMessage(content=prompt_text)])
+    # Call Gemini to get updated summary with automatic failover
+    provider = get_llm_provider()
+    response = await provider.ainvoke_with_failover(
+        messages=[HumanMessage(content=prompt_text)],
+        temperature=0.3,
+        with_tools=False,
+    )
 
     # Extract clean text whether content is a string or structured block list
     raw_content = response.content
