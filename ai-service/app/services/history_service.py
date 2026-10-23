@@ -1,12 +1,21 @@
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from pymongo import ASCENDING
 from app.database.mongodb import get_chat_messages_collection
 from app.models.chat import ChatMessageItem
 
 logger = logging.getLogger(__name__)
+
+
+def _ensure_utc(dt: Optional[datetime]) -> datetime:
+    """Ensure a datetime object is timezone-aware and set to UTC."""
+    if dt is None:
+        return datetime.now(timezone.utc)
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 
 async def save_message(
@@ -33,7 +42,7 @@ async def save_message(
         ChatMessageItem: The saved message record
     """
     msg_id = message_id or str(uuid.uuid4())
-    msg_timestamp = timestamp or datetime.utcnow()
+    msg_timestamp = _ensure_utc(timestamp)
     msg_attachments = attachments or []
 
     document = {
@@ -94,7 +103,7 @@ async def get_history(
             thread_id=doc["thread_id"],
             role=doc["role"],
             content=doc["content"],
-            timestamp=doc["timestamp"],
+            timestamp=_ensure_utc(doc.get("timestamp")),
             attachments=doc.get("attachments", []),
         )
         for doc in documents

@@ -463,7 +463,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function formatMessageTime(dateInput) {
         try {
-            const d = new Date(dateInput);
+            if (!dateInput) return 'Recently';
+            let d;
+            if (typeof dateInput === 'string') {
+                // If timestamp string lacks timezone designator ('Z' or offset), treat as UTC
+                const hasTimezone = dateInput.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateInput);
+                const utcStr = hasTimezone ? dateInput : `${dateInput}Z`;
+                d = new Date(utcStr);
+            } else {
+                d = new Date(dateInput);
+            }
+            if (isNaN(d.getTime())) return 'Recently';
             return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         } catch {
             return 'Recently';

@@ -59,8 +59,18 @@ const Toast = (() => {
 
 
 /* ══════════ Date Formatters ══════════ */
+function parseUtcDate(dateString) {
+    if (!dateString) return new Date();
+    if (dateString instanceof Date) return dateString;
+    if (typeof dateString === 'string') {
+        const hasTimezone = dateString.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateString);
+        return new Date(hasTimezone ? dateString : `${dateString}Z`);
+    }
+    return new Date(dateString);
+}
+
 function formatDate(dateString) {
-    const date = new Date(dateString);
+    const date = parseUtcDate(dateString);
     return date.toLocaleDateString('en-IN', {
         day: 'numeric',
         month: 'short',
@@ -69,7 +79,7 @@ function formatDate(dateString) {
 }
 
 function formatDateTime(dateString) {
-    const date = new Date(dateString);
+    const date = parseUtcDate(dateString);
     return date.toLocaleString('en-IN', {
         day: 'numeric',
         month: 'short',
@@ -80,7 +90,7 @@ function formatDateTime(dateString) {
 }
 
 function timeAgo(dateString) {
-    const date = new Date(dateString);
+    const date = parseUtcDate(dateString);
     const now = new Date();
     const diff = Math.floor((now - date) / 1000);
 

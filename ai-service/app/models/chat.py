@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
@@ -28,7 +28,10 @@ class ChatMessageItem(BaseModel):
     thread_id: str = Field(..., description="Thread identifier (e.g., secretary_12)")
     role: str = Field(..., pattern="^(human|assistant|system)$", description="Sender role")
     content: str = Field(..., description="Message text content")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="UTC timestamp")
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="UTC timestamp with timezone awareness"
+    )
     attachments: List[AttachmentItem] = Field(
         default_factory=list,
         description="List of file attachments (empty for standard text messages)"
