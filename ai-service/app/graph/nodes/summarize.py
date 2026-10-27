@@ -24,14 +24,40 @@ def format_messages_for_summary(messages: Sequence[BaseMessage]) -> str:
     return "\n".join(lines)
 
 
+def find_safe_overlap_index(messages: Sequence[BaseMessage], target_overlap: int = 5) -> int:
+    """
+    Find a clean turn boundary for sliding window overlap.
+    Guarantees that the retained overlap messages (messages[split_idx:])
+    always begin with a HumanMessage, never splitting an indivisible tool call turn
+    (HumanMessage -> AIMessage[tool_calls] -> ToolMessage -> AIMessage).
+    """
+    total = len(messages)
+    if total <= target_overlap:
+        return 0
+
+    cutoff = total - target_overlap
+
+    # Walk backwards from cutoff to find the nearest HumanMessage
+    for idx in range(cutoff, -1, -1):
+        if getattr(messages[idx], "type", "") == "human":
+            return idx
+
+    # If no HumanMessage found going backwards, walk forward
+    for idx in range(cutoff + 1, total):
+        if getattr(messages[idx], "type", "") == "human":
+            return idx
+
+    return cutoff
+
+
 async def summarize_node(state: AgentState) -> Dict[str, Any]:
     """
     LangGraph node to summarize earlier conversation messages and trim the sliding window.
 
     Steps:
-    1. Partitions messages into:
-       - messages_to_summarize: All messages except the last OVERLAP_MESSAGES (e.g. messages[:-5])
-       - keep_messages: The last OVERLAP_MESSAGES (e.g. messages[-5:]) preserved for continuity.
+    1. Uses find_safe_overlap_index to partition messages cleanly on a user turn boundary:
+       - messages_to_summarize: All messages before the safe turn boundary.
+       - keep_messages: The retained overlap messages, always starting on a HumanMessage.
     2. Builds an update prompt folding in the existing summary (if present).
     3. Asynchronously invokes Gemini to produce a consolidated summary string.
     4. Creates RemoveMessage operations for all messages being summarized.
@@ -41,18 +67,24 @@ async def summarize_node(state: AgentState) -> Dict[str, Any]:
     old_summary = state.get("summary", "").strip()
     overlap_count = settings.OVERLAP_MESSAGES  # Default: 5
 
-    # Safety check: if messages are fewer than overlap, nothing to trim
-    if len(messages) <= overlap_count:
-        logger.warning("summarize_node invoked but message count (%d) <= overlap (%d). Skipping.", len(messages), overlap_count)
+    # Find safe split index that preserves turn integrity
+    split_idx = find_safe_overlap_index(messages, target_overlap=overlap_count)
+
+    # Safety check: if no earlier messages can be cleanly summarized, skip
+    if split_idx <= 0:
+        logger.warning(
+            "summarize_node invoked but no clean user-turn split found (total=%d). Skipping.",
+            len(messages),
+        )
         return {}
 
-    messages_to_summarize = messages[:-overlap_count]
+    messages_to_summarize = messages[:split_idx]
     formatted_transcript = format_messages_for_summary(messages_to_summarize)
 
     logger.info(
-        "Summarizing %d messages (preserving %d overlap messages)...",
+        "Summarizing %d messages (preserving %d clean overlap messages)...",
         len(messages_to_summarize),
-        overlap_count,
+        len(messages) - split_idx,
     )
 
     # Build prompt: either fold into existing summary or create a fresh one
