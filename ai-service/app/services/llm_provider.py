@@ -24,6 +24,7 @@ from langchain_core.messages import BaseMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_google_genai import ChatGoogleGenerativeAI
 from app.config import settings
+from app.graph.sanitizer import sanitize_messages_for_gemini
 
 logger = logging.getLogger(__name__)
 
@@ -232,6 +233,9 @@ class LLMProvider:
         if not models:
             raise RuntimeError("No Gemini models configured. Please set GEMINI_MODELS in .env.")
 
+        # Sanitize messages to strictly adhere to Gemini turn order and function calling rules
+        clean_messages = sanitize_messages_for_gemini(messages)
+
         total_keys = len(keys)
         total_models = len(models)
         max_attempts = total_keys * total_models
@@ -259,9 +263,9 @@ class LLMProvider:
                     )
 
                     if config:
-                        response = await llm.ainvoke(messages, config=config)
+                        response = await llm.ainvoke(clean_messages, config=config)
                     else:
-                        response = await llm.ainvoke(messages)
+                        response = await llm.ainvoke(clean_messages)
 
                     # Success! Lock in working combination for subsequent calls
                     self._current_model_idx = model_idx

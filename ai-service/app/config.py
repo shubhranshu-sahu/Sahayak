@@ -79,10 +79,10 @@ class Settings(BaseSettings):
     )
 
     # Summarization Configuration
-    # Trigger summarization when window exceeds 30 messages
+    # Trigger summarization when window exceeds 35 messages
     # Keep the last 5 messages as conversational overlap
     MAX_WINDOW_MESSAGES: int = Field(
-        default=30,
+        default=35,
         description="Message count threshold to trigger summarization at start of next invocation",
     )
     OVERLAP_MESSAGES: int = Field(
