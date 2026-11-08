@@ -8,6 +8,7 @@
 
 ## Table of Contents
 
+0. [BUG-8: AI Agent Complaint Reply Displays "User" Instead of Secretary Name (🔴 High Priority)](#bug-8-ai-agent-complaint-reply-displays-user-instead-of-secretary-name)
 1. [BUG-1: Health Endpoint — Keep Databases Warm (🟡 Pending)](#bug-1-health-endpoint--keep-databases-warm)
 2. [BUG-2: Multi-API-Key & Multi-Model Failover (✅ Completed)](#bug-2-multi-api-key--multi-model-failover--completed)
 3. [BUG-3: Error Messages Leaking to Chat UI (🟢 Planned)](#bug-3-error-messages-leaking-to-chat-ui)
@@ -17,6 +18,61 @@
 7. [BUG-7: Sliding Window Summarization & Turn-Integrity (✅ Completed)](#bug-7-sliding-window-summarization--overlap-logic--completed)
 8. [Implementation Priority Order](#implementation-priority-order)
 9. [Post-Mortem & Deep-Dive: Gemini 400 INVALID_ARGUMENT Function-Call Invariant](#9-post-mortem--deep-dive-gemini-400-invalid_argument-function-call-invariant)
+
+---
+
+## BUG-8: AI Agent Complaint Reply Displays "User" Instead of Secretary Name
+
+**Priority**: 🔴 Do Now (High Priority — UI Trust & Authenticity)  
+**Affects**: `complaints.py` (AI Service), `complaints.service.js` (Node.js Backend), `complaints.js` (Frontend)
+
+### Current Behavior & Symptoms
+When the AI agent replies to a complaint on behalf of the secretary via the tool `reply_to_complaint`, the frontend displays:
+```text
+User
+Official
+· just now
+will solve after diwali
+```
+The sender appears as `"User"` instead of the Secretary's name (e.g. `"Shubhranshu Sahu"`) or `"Secretary"`, despite having the `"Official"` badge attached.
+
+### Root Cause Analysis (3-Tier Chain)
+1. **AI Service (`complaints.py`)**:
+   `reply_to_complaint` inserts rows into MySQL with `sender_id = NULL` and `sender_role = 'secretary'`:
+   ```sql
+   INSERT INTO complaint_replies (complaint_id, sender_id, sender_role, message)
+   VALUES (?, NULL, 'secretary', ?);
+   ```
+2. **Backend Query & DTO (`complaints.service.js`)**:
+   The backend retrieves the thread using `LEFT JOIN users u ON r.sender_id = u.id`. Since `sender_id` is `NULL`, `u.name` is `NULL`.
+   In line 244, the backend formats the reply object:
+   ```javascript
+   senderName: r.sender_role === 'system' ? 'System' : (r.sender_name || 'User')
+   ```
+   Because `sender_role` is `'secretary'` (not `'system'`), it executes `(r.sender_name || 'User')`. With `r.sender_name === null`, it falls back to the hardcoded string `"User"`.
+3. **Frontend (`complaints.js`)**:
+   The frontend checks:
+   ```javascript
+   ${escapeHtml(msg.senderName || (isSec ? 'Secretary' : 'Resident'))}
+   ```
+   Because `msg.senderName` is `"User"` (a truthy, non-empty string), JavaScript does not trigger the fallback to `'Secretary'`.
+
+### Recommended Dual Fix
+1. **AI Service Tool Fix (`complaints.py`)**:
+   In `reply_to_complaint`, lookup the society's `secretary_id` from the `societies` table:
+   ```python
+   await cur.execute("SELECT secretary_id FROM societies WHERE id = %s", (society_id,))
+   soc = await cur.fetchone()
+   sec_id = soc["secretary_id"] if soc else None
+   ```
+   Insert `sender_id = sec_id`. This allows the `LEFT JOIN users` in backend to fetch the secretary's real name (e.g. `"Shubhranshu Sahu"`).
+2. **Backend Defensive Fix (`complaints.service.js`)**:
+   Update line 244 to handle `sender_id = NULL` for secretary roles:
+   ```javascript
+   senderName: r.sender_role === 'system' 
+     ? 'System' 
+     : (r.sender_name || (r.sender_role === 'secretary' ? 'Secretary (AI)' : 'Resident'))
+   ```
 
 ---
 
