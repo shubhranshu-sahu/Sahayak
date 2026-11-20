@@ -299,6 +299,57 @@ const Api = (() => {
         return get('/secretary/complaints/stats');
     }
 
+    /* ── Phase 2C Announcements & Digital Notice Board Helpers ── */
+    function getSocietyStructure() {
+        return get('/society/structure');
+    }
+
+    function getActiveResidents() {
+        return get('/secretary/residents');
+    }
+
+    function createAnnouncement(payload) {
+        return post('/announcements', payload);
+    }
+
+    function listAnnouncements(params = {}) {
+        const query = new URLSearchParams();
+        if (params.status) query.set('status', params.status);
+        if (params.category) query.set('category', params.category);
+        if (params.priority) query.set('priority', params.priority);
+        if (params.target_type) query.set('target_type', params.target_type);
+        if (params.page) query.set('page', params.page);
+        if (params.limit) query.set('limit', params.limit);
+        const qs = query.toString() ? `?${query.toString()}` : '';
+        return get(`/announcements${qs}`);
+    }
+
+    function getAnnouncementById(announcementId) {
+        return get(`/announcements/${announcementId}`);
+    }
+
+    function deleteAnnouncement(announcementId) {
+        return del(`/announcements/${announcementId}`);
+    }
+
+    function deleteExpiredAnnouncements() {
+        return del('/announcements/expired');
+    }
+
+    function getMyAnnouncements(params = {}) {
+        const query = new URLSearchParams();
+        if (params.include_expired !== undefined) query.set('include_expired', String(params.include_expired));
+        if (params.category) query.set('category', params.category);
+        if (params.page) query.set('page', params.page);
+        if (params.limit) query.set('limit', params.limit);
+        const qs = query.toString() ? `?${query.toString()}` : '';
+        return get(`/announcements/my${qs}`);
+    }
+
+    function markAnnouncementRead(announcementId) {
+        return post(`/announcements/${announcementId}/read`);
+    }
+
     return {
         request,
         get,
@@ -331,5 +382,15 @@ const Api = (() => {
         getSecretaryComplaints,
         updateComplaintStatus,
         getComplaintStats,
+        // Phase 2C Announcements additions
+        getSocietyStructure,
+        getActiveResidents,
+        createAnnouncement,
+        listAnnouncements,
+        getAnnouncementById,
+        deleteAnnouncement,
+        deleteExpiredAnnouncements,
+        getMyAnnouncements,
+        markAnnouncementRead,
     };
 })();
