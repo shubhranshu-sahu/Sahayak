@@ -41,6 +41,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+let globalStructure = null;
+let globalResidents = [];
+
 /* ════════════════════════════════════════════════════════════════
    SECRETARY MODULE
    ════════════════════════════════════════════════════════════════ */
@@ -213,10 +216,12 @@ function initSecretaryView(user) {
 
             if (structRes.success && structRes.data) {
                 societyStructure = structRes.data;
+                globalStructure = structRes.data;
                 populateBlockDropdowns();
             }
             if (resRes.success && Array.isArray(resRes.data)) {
                 activeResidents = resRes.data;
+                globalResidents = resRes.data;
                 populateResidentDropdown();
             }
         } catch (err) {
@@ -233,24 +238,27 @@ function initSecretaryView(user) {
         targetUnitSelect.innerHTML = '<option value="">-- Choose Unit --</option>';
 
         societyStructure.blocks.forEach(block => {
+            const blockName = block.blockName || block.block_name || `Block ${block.id}`;
             const opt1 = document.createElement('option');
             opt1.value = block.id;
-            opt1.textContent = `Block ${block.block_name}`;
+            opt1.textContent = `Block ${blockName}`;
             targetBlockSelect.appendChild(opt1);
 
             const opt2 = document.createElement('option');
             opt2.value = block.id;
-            opt2.textContent = `Block ${block.block_name}`;
+            opt2.textContent = `Block ${blockName}`;
             targetFloorBlockSelect.appendChild(opt2);
 
             // Units
             if (Array.isArray(block.floors)) {
                 block.floors.forEach(fl => {
+                    const floorNo = fl.floorNumber !== undefined ? fl.floorNumber : (fl.floor_number !== undefined ? fl.floor_number : fl.id);
                     if (Array.isArray(fl.units)) {
                         fl.units.forEach(u => {
                             const uOpt = document.createElement('option');
                             uOpt.value = u.id;
-                            uOpt.textContent = u.display_label ? u.display_label : `${block.block_name}-${u.unit_number}`;
+                            const unitLabel = u.displayLabel || u.display_label || `${blockName}-${u.unitNumber || u.unit_number || u.id}`;
+                            uOpt.textContent = `Unit ${unitLabel} (Floor ${floorNo})`;
                             targetUnitSelect.appendChild(uOpt);
                         });
                     }
@@ -267,9 +275,10 @@ function initSecretaryView(user) {
         const block = societyStructure.blocks.find(b => b.id === blockId);
         if (block && Array.isArray(block.floors)) {
             block.floors.forEach(fl => {
+                const floorNo = fl.floorNumber !== undefined ? fl.floorNumber : (fl.floor_number !== undefined ? fl.floor_number : fl.id);
                 const fOpt = document.createElement('option');
                 fOpt.value = fl.id;
-                fOpt.textContent = `Floor ${fl.floor_number}`;
+                fOpt.textContent = `Floor ${floorNo}`;
                 targetFloorSelect.appendChild(fOpt);
             });
         }
@@ -280,7 +289,7 @@ function initSecretaryView(user) {
         activeResidents.forEach(r => {
             const opt = document.createElement('option');
             opt.value = r.id;
-            const flat = r.displayLabel || r.unitNumber || 'Unit';
+            const flat = r.displayLabel || r.unitLabel || r.unitNumber || (r.unit ? (r.unit.displayLabel || r.unit.unitNumber) : 'Unit');
             opt.textContent = `${r.name} (${flat})`;
             targetUserSelect.appendChild(opt);
         });
@@ -925,10 +934,50 @@ function initResidentView(user) {
 function formatTargetLabel(targetType, targetId, targetRole) {
     if (targetType === 'all') return 'All Society Residents';
     if (targetType === 'role') return `All ${targetRole === 'owner' ? 'Owners' : 'Tenants'}`;
-    if (targetType === 'block') return `Block (ID: ${targetId})`;
-    if (targetType === 'floor') return `Floor (ID: ${targetId})`;
-    if (targetType === 'unit') return `Unit (ID: ${targetId})`;
-    if (targetType === 'user') return `Personal Resident (ID: ${targetId})`;
+    if (targetType === 'block') {
+        const b = globalStructure?.blocks?.find(x => x.id === targetId);
+        if (b) {
+            const bName = b.blockName || b.block_name || targetId;
+            return `Block ${bName}`;
+        }
+        return `Block (ID: ${targetId})`;
+    }
+    if (targetType === 'floor') {
+        if (globalStructure?.blocks) {
+            for (const b of globalStructure.blocks) {
+                const fl = b.floors?.find(x => x.id === targetId);
+                if (fl) {
+                    const bName = b.blockName || b.block_name || '';
+                    const fNo = fl.floorNumber !== undefined ? fl.floorNumber : (fl.floor_number !== undefined ? fl.floor_number : targetId);
+                    return `Block ${bName} - Floor ${fNo}`;
+                }
+            }
+        }
+        return `Floor (ID: ${targetId})`;
+    }
+    if (targetType === 'unit') {
+        if (globalStructure?.blocks) {
+            for (const b of globalStructure.blocks) {
+                if (b.floors) {
+                    for (const fl of b.floors) {
+                        const u = fl.units?.find(x => x.id === targetId);
+                        if (u) {
+                            return `Unit ${u.displayLabel || u.display_label || u.unitNumber || targetId}`;
+                        }
+                    }
+                }
+            }
+        }
+        return `Unit (ID: ${targetId})`;
+    }
+    if (targetType === 'user') {
+        const r = globalResidents?.find(x => x.id === targetId);
+        if (r) {
+            const flat = r.displayLabel || r.unitLabel || r.unitNumber || (r.unit ? (r.unit.displayLabel || r.unit.unitNumber) : '');
+            return `${r.name}${flat ? ` (${flat})` : ''} (Personal)`;
+        }
+        return `Resident (ID: ${targetId})`;
+    }
     return 'Targeted Audience';
 }
 
