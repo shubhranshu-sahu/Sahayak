@@ -107,7 +107,7 @@ const Api = (() => {
 
     /**
      * Stream response from AI Service via Server-Sent Events (SSE)
-     * @param {object} params - { message, society_name, secretary_name, onStart, onToken, onDone, onError, signal }
+     * @param {object} params - { message, society_name, secretary_name, onStart, onToken, onDone, onError, onToolStart, onToolResult, onStatus, signal }
      */
     async function aiStreamChat({
         message,
@@ -117,6 +117,9 @@ const Api = (() => {
         onToken = null,
         onDone = null,
         onError = null,
+        onToolStart = null,
+        onToolResult = null,
+        onStatus = null,
         signal = null,
     }) {
         const token = localStorage.getItem(CONFIG.TOKEN_KEY);
@@ -146,7 +149,7 @@ const Api = (() => {
                 try {
                     const errJson = await res.json();
                     errorMsg = errJson.detail || errJson.message || errorMsg;
-                } catch (_) {}
+                } catch (_) { }
                 throw new Error(errorMsg);
             }
 
@@ -173,6 +176,12 @@ const Api = (() => {
                         const event = JSON.parse(jsonStr);
                         if (event.type === 'start') {
                             if (onStart) onStart(event);
+                        } else if (event.type === 'status') {
+                            if (onStatus) onStatus(event);
+                        } else if (event.type === 'tool_start') {
+                            if (onToolStart) onToolStart(event);
+                        } else if (event.type === 'tool_result') {
+                            if (onToolResult) onToolResult(event);
                         } else if (event.type === 'token') {
                             if (onToken) onToken(event.content);
                         } else if (event.type === 'done') {
@@ -195,5 +204,193 @@ const Api = (() => {
         }
     }
 
-    return { request, get, post, put, patch, del, aiGet, aiPost, aiStreamChat };
+    /* ── Phase 1B Domain Helpers ── */
+    function getDashboardStats() {
+        return get('/secretary/dashboard/stats');
+    }
+
+    function getAllResidents(status = '') {
+        const query = status ? `?status=${encodeURIComponent(status)}` : '';
+        return get(`/secretary/residents/all${query}`);
+    }
+
+    function revokeResident(residentId) {
+        return post(`/secretary/residents/${residentId}/revoke`);
+    }
+
+    function reactivateResident(residentId, unitId) {
+        return post(`/secretary/residents/${residentId}/reactivate`, { unitId });
+    }
+
+    function validateSocietyCode(code) {
+        return get(`/public/validate-code/${encodeURIComponent(code)}`);
+    }
+
+    function renameBlock(blockId, block_name) {
+        return put(`/society/blocks/${blockId}`, { block_name });
+    }
+
+    function deleteBlock(blockId) {
+        return del(`/society/blocks/${blockId}`);
+    }
+
+    function deleteFloor(blockId, floorId) {
+        return del(`/blocks/${blockId}/floors/${floorId}`);
+    }
+
+    function deleteUnit(unitId) {
+        return del(`/units/${unitId}`);
+    }
+
+    function editUnit(unitId, data) {
+        return put(`/units/${unitId}`, data);
+    }
+
+    function getVacantUnits() {
+        return get('/structure/vacant-units');
+    }
+
+    /* ── Phase 2 Complaints Module Helpers ── */
+    function createComplaint(payload) {
+        return post('/complaints', payload);
+    }
+
+    function getMyComplaints(params = {}) {
+        const query = new URLSearchParams();
+        if (params.status) query.set('status', params.status);
+        if (params.page) query.set('page', params.page);
+        if (params.limit) query.set('limit', params.limit);
+        const qs = query.toString() ? `?${query.toString()}` : '';
+        return get(`/complaints/my${qs}`);
+    }
+
+    function getComplaintById(complaintId) {
+        return get(`/complaints/${complaintId}`);
+    }
+
+    function addComplaintReply(complaintId, payload) {
+        return post(`/complaints/${complaintId}/replies`, payload);
+    }
+
+    function confirmComplaintResolution(complaintId, feedback = '') {
+        return post(`/complaints/${complaintId}/confirm-resolved`, { feedback });
+    }
+
+    function reopenComplaint(complaintId, reason) {
+        return post(`/complaints/${complaintId}/reopen`, { reason });
+    }
+
+    function getSecretaryComplaints(params = {}) {
+        const query = new URLSearchParams();
+        if (params.status) query.set('status', params.status);
+        if (params.category) query.set('category', params.category);
+        if (params.search) query.set('search', params.search);
+        if (params.page) query.set('page', params.page);
+        if (params.limit) query.set('limit', params.limit);
+        const qs = query.toString() ? `?${query.toString()}` : '';
+        return get(`/secretary/complaints${qs}`);
+    }
+
+    function updateComplaintStatus(complaintId, payload) {
+        return patch(`/secretary/complaints/${complaintId}/status`, payload);
+    }
+
+    function getComplaintStats() {
+        return get('/secretary/complaints/stats');
+    }
+
+    /* ── Phase 2C Announcements & Digital Notice Board Helpers ── */
+    function getSocietyStructure() {
+        return get('/society/structure');
+    }
+
+    function getActiveResidents() {
+        return get('/secretary/residents');
+    }
+
+    function createAnnouncement(payload) {
+        return post('/announcements', payload);
+    }
+
+    function listAnnouncements(params = {}) {
+        const query = new URLSearchParams();
+        if (params.status) query.set('status', params.status);
+        if (params.category) query.set('category', params.category);
+        if (params.priority) query.set('priority', params.priority);
+        if (params.target_type) query.set('target_type', params.target_type);
+        if (params.page) query.set('page', params.page);
+        if (params.limit) query.set('limit', params.limit);
+        const qs = query.toString() ? `?${query.toString()}` : '';
+        return get(`/announcements${qs}`);
+    }
+
+    function getAnnouncementById(announcementId) {
+        return get(`/announcements/${announcementId}`);
+    }
+
+    function deleteAnnouncement(announcementId) {
+        return del(`/announcements/${announcementId}`);
+    }
+
+    function deleteExpiredAnnouncements() {
+        return del('/announcements/expired');
+    }
+
+    function getMyAnnouncements(params = {}) {
+        const query = new URLSearchParams();
+        if (params.include_expired !== undefined) query.set('include_expired', String(params.include_expired));
+        if (params.category) query.set('category', params.category);
+        if (params.page) query.set('page', params.page);
+        if (params.limit) query.set('limit', params.limit);
+        const qs = query.toString() ? `?${query.toString()}` : '';
+        return get(`/announcements/my${qs}`);
+    }
+
+    function markAnnouncementRead(announcementId) {
+        return post(`/announcements/${announcementId}/read`);
+    }
+
+    return {
+        request,
+        get,
+        post,
+        put,
+        patch,
+        del,
+        aiGet,
+        aiPost,
+        aiStreamChat,
+        // Phase 1B additions
+        getDashboardStats,
+        getAllResidents,
+        revokeResident,
+        reactivateResident,
+        validateSocietyCode,
+        renameBlock,
+        deleteBlock,
+        deleteFloor,
+        deleteUnit,
+        editUnit,
+        getVacantUnits,
+        // Phase 2 Complaints additions
+        createComplaint,
+        getMyComplaints,
+        getComplaintById,
+        addComplaintReply,
+        confirmComplaintResolution,
+        reopenComplaint,
+        getSecretaryComplaints,
+        updateComplaintStatus,
+        getComplaintStats,
+        // Phase 2C Announcements additions
+        getSocietyStructure,
+        getActiveResidents,
+        createAnnouncement,
+        listAnnouncements,
+        getAnnouncementById,
+        deleteAnnouncement,
+        deleteExpiredAnnouncements,
+        getMyAnnouncements,
+        markAnnouncementRead,
+    };
 })();

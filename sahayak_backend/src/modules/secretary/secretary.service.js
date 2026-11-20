@@ -336,3 +336,79 @@ export const getDashboardStats = async (societyId) => {
     }))
   };
 };
+
+/**
+ * Reactivate an inactive (revoked) or rejected resident and assign a vacant unit
+ */
+export const reactivateResident = async (societyId, residentId, unitId) => {
+  if (!unitId) {
+    throw { status: 400, message: 'unitId is required to reactivate a resident.' };
+  }
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // 1. Lock and check resident
+    const [residents] = await connection.execute(
+      'SELECT id, name, status FROM users WHERE id = ? AND society_id = ? AND role = ? FOR UPDATE',
+      [residentId, societyId, 'resident']
+    );
+
+    if (residents.length === 0) {
+      throw { status: 404, message: 'Resident not found in your society.' };
+    }
+
+    const resident = residents[0];
+    if (resident.status === 'active') {
+      throw { status: 400, message: 'Resident is already active.' };
+    }
+    if (resident.status === 'pending') {
+      throw { status: 400, message: 'Resident is pending approval. Use the approve endpoint instead.' };
+    }
+
+    // 2. Lock and check target unit
+    const [units] = await connection.execute(
+      'SELECT id, display_label, status FROM units WHERE id = ? AND society_id = ? FOR UPDATE',
+      [unitId, societyId]
+    );
+
+    if (units.length === 0) {
+      throw { status: 404, message: 'Unit not found in your society.' };
+    }
+
+    const targetUnit = units[0];
+    if (targetUnit.status === 'occupied') {
+      throw { status: 409, message: `Unit ${targetUnit.display_label} is already occupied. Select a vacant unit.` };
+    }
+
+    // 3. Update user status to active and assign unit
+    await connection.execute(
+      'UPDATE users SET status = ?, unit_id = ? WHERE id = ?',
+      ['active', unitId, residentId]
+    );
+
+    // 4. Mark unit occupied
+    await connection.execute(
+      'UPDATE units SET status = ? WHERE id = ?',
+      ['occupied', unitId]
+    );
+
+    await connection.commit();
+
+    return {
+      userId: resident.id,
+      name: resident.name,
+      status: 'active',
+      unit: {
+        id: targetUnit.id,
+        displayLabel: targetUnit.display_label,
+      },
+    };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+};

@@ -15,8 +15,8 @@
 | `blocks` | ✅ Finalized | [SOCIETY_STRUCTURE_DB.md](./SOCIETY_STRUCTURE_DB.md) |
 | `floors` | ✅ Finalized | [SOCIETY_STRUCTURE_DB.md](./SOCIETY_STRUCTURE_DB.md) |
 | `units` | ✅ Finalized | [SOCIETY_STRUCTURE_DB.md](./SOCIETY_STRUCTURE_DB.md) |
-| `tickets` | 🔲 Pending | Phase 2 |
-| `ticket_replies` | 🔲 Pending | Phase 2 |
+| `complaints` | ✅ Finalized | [COMPLAINTS_DB.md](./COMPLAINTS_DB.md) |
+| `complaint_replies` | ✅ Finalized | [COMPLAINTS_DB.md](./COMPLAINTS_DB.md) |
 | `announcements` | 🔲 Pending | Phase 2 |
 | `vendors` | 🔲 Pending | Phase 2 |
 | `maintenance_config` | 🔲 Pending | Phase 2 |

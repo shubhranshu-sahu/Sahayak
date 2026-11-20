@@ -30,20 +30,27 @@ def extract_chunk_text(content: Any) -> str:
 
 async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
     """
-    Orchestrate the streaming chat interaction:
+    Orchestrate the streaming agentic chat interaction:
     1. Resolve permanent thread_id (e.g. 'secretary_12').
     2. Save incoming user message to MongoDB permanent 'chat_messages' collection.
     3. Yield SSE 'start' event with message and thread IDs.
-    4. Stream response tokens from LangGraph's call_model node via Server-Sent Events (SSE).
-    5. Accumulate the full response.
-    6. Save full assistant message to MongoDB permanent collection upon stream completion.
-    7. Yield SSE 'done' event with full accumulated content.
+    4. Stream LangGraph execution via Server-Sent Events (SSE):
+       - 'tool_start': Emitted when LLM calls an agent tool
+       - 'tool_result': Emitted when ToolNode completes execution
+       - 'token': Emitted for real-time text chunk streaming
+    5. Accumulate the final text response.
+    6. Save full assistant message to MongoDB permanent collection upon completion.
+    7. Yield SSE 'done' event with the complete response.
     """
     thread_id = request.thread_id or f"secretary_{request.secretary_id}"
     user_msg_id = str(uuid.uuid4())
     ai_msg_id = str(uuid.uuid4())
 
-    logger.info("Processing chat stream for thread: %s", thread_id)
+    logger.info(
+        "Processing chat stream for thread: %s (society_id: %s)",
+        thread_id,
+        request.society_id,
+    )
 
     # 1. Save user message immediately to permanent chat history
     try:
@@ -66,11 +73,12 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
     }
     yield f"data: {json.dumps(start_payload)}\n\n"
 
-    # 3. Stream LangGraph execution
+    # 3. Stream LangGraph execution with society_id in RunnableConfig
     graph = get_graph()
     config = {
         "configurable": {
             "thread_id": thread_id,
+            "society_id": request.society_id,
             "society_name": request.society_name or "the Society",
             "secretary_name": request.secretary_name or "Secretary",
         }
@@ -87,12 +95,26 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             config=config,
             stream_mode="messages",
         ):
-            # Only stream tokens produced by the call_model node (skip summarizer internals)
-            if metadata.get("langgraph_node") == "call_model":
+            node = metadata.get("langgraph_node", "")
+
+            # A. Model output node: handles tokens and tool call emissions
+            if node == "call_model":
+                # Detect tool calls in the chunk
+                if hasattr(chunk, "tool_calls") and chunk.tool_calls:
+                    for tc in chunk.tool_calls:
+                        yield f"data: {json.dumps({'type': 'tool_start', 'tool': tc.get('name'), 'args': tc.get('args', {})})}\n\n"
+
+                # Stream text content
                 token = extract_chunk_text(chunk.content)
                 if token:
                     accumulated_parts.append(token)
                     yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
+
+            # B. Tool executor node: emits tool execution progress
+            elif node == "tool_executor":
+                tool_content = getattr(chunk, "content", "")
+                if tool_content:
+                    yield f"data: {json.dumps({'type': 'tool_result', 'content': str(tool_content)[:500]})}\n\n"
 
     except Exception as e:
         logger.error("Error during LangGraph stream execution: %s", e, exc_info=True)
@@ -110,7 +132,11 @@ async def stream_chat(request: ChatRequest) -> AsyncIterator[str]:
             content=full_response,
             message_id=ai_msg_id,
         )
-        logger.info("Successfully persisted completed AI response (%s) for thread %s.", ai_msg_id, thread_id)
+        logger.info(
+            "Successfully persisted completed AI response (%s) for thread %s.",
+            ai_msg_id,
+            thread_id,
+        )
     except Exception as e:
         logger.error("Failed to persist AI response: %s", e, exc_info=True)
 

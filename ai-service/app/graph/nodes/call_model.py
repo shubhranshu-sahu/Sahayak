@@ -1,31 +1,30 @@
 import logging
 from typing import Any, Dict, Optional
 from langchain_core.runnables import RunnableConfig
-from langchain_google_genai import ChatGoogleGenerativeAI
-from app.config import settings
 from app.graph.state import AgentState
+from app.graph.tools import get_all_tools
 from app.prompts.system import get_system_message
+from app.services.llm_provider import get_llm_provider
 
 logger = logging.getLogger(__name__)
 
-# Cached model instances by temperature
-_models: Dict[float, ChatGoogleGenerativeAI] = {}
+
+def get_llm(temperature: float = 0.7) -> Any:
+    """
+    Return the active LLM instance from the failover provider.
+    Provided for backward compatibility.
+    """
+    return get_llm_provider().get_llm(temperature=temperature, with_tools=False)
 
 
-def get_llm(temperature: float = 0.7) -> ChatGoogleGenerativeAI:
+def get_llm_with_tools() -> Any:
     """
-    Return a configured Gemini LLM instance.
-    Caches models by temperature.
+    Return the active LLM instance bound with all registered agent tools.
+    Provided for backward compatibility.
     """
-    if temperature not in _models:
-        _models[temperature] = ChatGoogleGenerativeAI(
-            model=settings.GEMINI_MODEL,
-            google_api_key=settings.GEMINI_API_KEY,
-            temperature=temperature,
-            max_retries=2,
-            timeout=30.0,
-        )
-    return _models[temperature]
+    provider = get_llm_provider()
+    provider.bind_tools(get_all_tools())
+    return provider.get_llm(temperature=0.7, with_tools=True)
 
 
 async def call_model(
@@ -33,20 +32,18 @@ async def call_model(
     config: Optional[RunnableConfig] = None,
 ) -> Dict[str, Any]:
     """
-    Main LangGraph node to invoke the Gemini LLM.
+    Main LangGraph node: invoke Gemini with tool bindings and automatic failover.
 
-    Steps:
-    1. Reads runtime metadata (society_name, secretary_name) from config['configurable'].
-    2. Builds a fresh SystemMessage containing persona and the rolling conversation summary.
-    3. Prepends the SystemMessage to the current sliding window messages.
-    4. Calls Gemini asynchronously (non-blocking).
-    5. Returns {'messages': [response]} which LangGraph's add_messages reducer appends to state.
+    If a quota limit (429) or model unavailability (503/404) occurs, the LLMProvider
+    automatically switches to the next API key or fallback model without crashing.
+
+    The LLM may return:
+    - An AIMessage with tool_calls -> route_after_model sends to tool_executor
+    - A plain text AIMessage (final answer) -> route_after_model sends to END
     """
     configurable = (config or {}).get("configurable", {})
     society_name = configurable.get("society_name", "the Society")
     secretary_name = configurable.get("secretary_name", "Secretary")
-
-    logger.info("Invoking Gemini (%s) for %s...", settings.GEMINI_MODEL, secretary_name)
 
     # 1. Build the system message with rolling summary injected
     system_msg = get_system_message(
@@ -58,11 +55,39 @@ async def call_model(
     # 2. Prepend system prompt to the messages in the sliding window
     messages_to_send = [system_msg, *state["messages"]]
 
-    # 3. Asynchronously invoke Gemini
-    llm = get_llm()
-    response = await llm.ainvoke(messages_to_send)
+    # 3. Obtain LLM provider, register tools, and invoke with automatic failover
+    provider = get_llm_provider()
+    provider.bind_tools(get_all_tools())
 
-    logger.info("Received response from Gemini (%d chars).", len(response.content or ""))
+    logger.info(
+        "Invoking LLM for %s (%s) [model=%s, key=%s]...",
+        secretary_name,
+        society_name,
+        provider.current_model,
+        provider.current_key_masked,
+    )
+
+    response = await provider.ainvoke_with_failover(
+        messages=messages_to_send,
+        temperature=0.7,
+        with_tools=True,
+        config=config,
+    )
+
+    tool_calls = getattr(response, "tool_calls", None)
+    if tool_calls:
+        logger.info(
+            "LLM requested %d tool call(s) [%s]: %s",
+            len(tool_calls),
+            provider.current_model,
+            [tc.get("name") for tc in tool_calls],
+        )
+    else:
+        logger.info(
+            "LLM responded with final text (%d chars) [%s].",
+            len(str(response.content or "")),
+            provider.current_model,
+        )
 
     # 4. Return update dict - LangGraph appends this AIMessage to state['messages']
     return {"messages": [response]}

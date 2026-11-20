@@ -115,13 +115,28 @@
                     <div class="residents-tabs">
                         <button type="button" class="resident-tab active" id="tab-btn-pending" data-tab="pending">
                             <i data-lucide="user-clock"></i>
-                            <span>Pending Approvals</span>
+                            <span>Pending</span>
                             <span class="tab-badge warning" id="badge-pending-count">0</span>
                         </button>
                         <button type="button" class="resident-tab" id="tab-btn-active" data-tab="active">
+                            <i data-lucide="user-check"></i>
+                            <span>Active</span>
+                            <span class="tab-badge positive" id="badge-active-count">0</span>
+                        </button>
+                        <button type="button" class="resident-tab" id="tab-btn-inactive" data-tab="inactive">
+                            <i data-lucide="user-x"></i>
+                            <span>Revoked / Inactive</span>
+                            <span class="tab-badge" id="badge-inactive-count">0</span>
+                        </button>
+                        <button type="button" class="resident-tab" id="tab-btn-rejected" data-tab="rejected">
+                            <i data-lucide="user-minus"></i>
+                            <span>Rejected</span>
+                            <span class="tab-badge" id="badge-rejected-count" style="background: rgba(198, 40, 40, 0.1); color: #C62828;">0</span>
+                        </button>
+                        <button type="button" class="resident-tab" id="tab-btn-all" data-tab="all">
                             <i data-lucide="users"></i>
-                            <span>Approved Residents</span>
-                            <span class="tab-badge" id="badge-active-count">0</span>
+                            <span>All</span>
+                            <span class="tab-badge" id="badge-all-count">0</span>
                         </button>
                     </div>
 
@@ -236,6 +251,95 @@
                 <button type="button" class="btn-secondary" id="btn-cancel-reject">Cancel</button>
                 <button type="button" class="btn-danger" id="btn-confirm-reject">
                     <span class="btn-text">Confirm Rejection</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revoke Confirmation Modal -->
+    <div id="revoke-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon-badge" style="background: #FFF3E0; color: #E65100;">
+                    <i data-lucide="user-x"></i>
+                </div>
+                <div>
+                    <h3 class="modal-title">Revoke Resident Access</h3>
+                    <p class="modal-subtitle">Deactivate account and release unit back to vacant</p>
+                </div>
+                <button type="button" class="btn-modal-close" id="btn-close-revoke-modal" aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <p>Are you sure you want to revoke access for <strong id="revoke-modal-resident-name" style="color: var(--clr-primary);">Resident</strong>?</p>
+                <div class="modal-unit-warning" style="background: #FFF8E1; border: 1px solid #FFE082; color: #E65100;">
+                    <i data-lucide="alert-triangle" style="color: #E65100; width: 18px; flex-shrink: 0;"></i>
+                    <div>
+                        <strong>Unit Release & Session Termination:</strong>
+                        <div style="margin-top: 4px; font-size: 11px; color: var(--clr-text-secondary); line-height: 1.5;">
+                            • Flat <strong id="revoke-modal-resident-unit" style="color: var(--clr-text-primary);">--</strong> will be unlinked and immediately marked as <strong>vacant</strong>.<br>
+                            • The user's status will change to <strong>inactive</strong> and all active logins will be revoked.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="btn-cancel-revoke">Cancel</button>
+                <button type="button" class="btn-danger" id="btn-confirm-revoke" style="background: #C62828;">
+                    <span class="btn-text">Confirm Revocation</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reactivate Confirmation & Unit Assignment Modal -->
+    <div id="reactivate-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon-badge" style="background: #E8F5E9; color: #2E7D32;">
+                    <i data-lucide="user-check"></i>
+                </div>
+                <div>
+                    <h3 class="modal-title">Reactivate Resident Access</h3>
+                    <p class="modal-subtitle">Re-grant society portal access and allocate a vacant flat</p>
+                </div>
+                <button type="button" class="btn-modal-close" id="btn-close-reactivate-modal" aria-label="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <p>You are restoring society access for <strong id="reactivate-modal-resident-name" style="color: var(--clr-primary);">Resident</strong> (<span id="reactivate-modal-resident-status" style="font-weight: 600; text-transform: capitalize;">revoked</span>).</p>
+                
+                <div style="margin-top: var(--sp-4);">
+                    <label for="reactivate-unit-select" style="display: block; font-weight: 600; font-size: var(--fs-xs); color: var(--clr-text-primary); margin-bottom: 6px;">
+                        Select Vacant Unit to Allocate <span style="color: var(--clr-danger);">*</span>
+                    </label>
+                    <select id="reactivate-unit-select" style="width: 100%; height: 42px; font-size: var(--fs-sm); border: 1px solid var(--clr-border); border-radius: var(--radius-md); padding: 0 12px; background: var(--clr-surface); color: var(--clr-text-primary); outline: none;">
+                        <option value="">Loading vacant units...</option>
+                    </select>
+                    <span id="reactivate-unit-hint" style="display: block; font-size: 11px; color: var(--clr-text-secondary); margin-top: 4px;">Only currently vacant flats in your society are eligible.</span>
+                </div>
+
+                <div class="modal-unit-warning" style="background: #E8F5E9; border: 1px solid #C8E6C9; color: #2E7D32; margin-top: var(--sp-4);">
+                    <i data-lucide="check-circle" style="color: #2E7D32; width: 18px; flex-shrink: 0;"></i>
+                    <div>
+                        <strong>Unit Allocation & Access Restoration:</strong>
+                        <div style="margin-top: 4px; font-size: 11px; color: var(--clr-text-secondary); line-height: 1.5;">
+                            • The selected flat will immediately be marked as <strong>occupied</strong>.<br>
+                            • The resident will become <strong>active</strong> and can log in to the portal immediately.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="btn-cancel-reactivate">Cancel</button>
+                <button type="button" class="btn-action-approve" id="btn-confirm-reactivate" style="padding: var(--sp-2) var(--sp-5); font-size: var(--fs-sm);">
+                    <span class="btn-text">Confirm Reactivation</span>
                 </button>
             </div>
         </div>

@@ -48,10 +48,10 @@ const Router = (() => {
     function logout() {
         localStorage.removeItem(CONFIG.TOKEN_KEY);
         localStorage.removeItem(CONFIG.USER_KEY);
-        
+
         const isPagesDir = window.location.pathname.includes('/pages/');
         const homeUrl = isPagesDir ? '../index.html' : 'index.html';
-        
+
         // Use replace so user cannot press Back button to revisit authenticated state
         window.location.replace(homeUrl);
     }
@@ -162,6 +162,7 @@ const Router = (() => {
             'resident-dashboard.html',
             'society-setup.html',
             'residents.html',
+            'complaints.html',
             'chat.html'
         ].some(p => path.includes(p));
 

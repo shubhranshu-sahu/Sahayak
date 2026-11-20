@@ -116,3 +116,19 @@ export const getDashboardStats = async (req, res, next) => {
     next(error);
   }
 };
+/**
+ * POST /api/v1/secretary/residents/:residentId/reactivate
+ */
+export const reactivateResident = async (req, res, next) => {
+  try {
+    const { residentId } = req.params;
+    const { unitId } = req.body;
+    const data = await secretaryService.reactivateResident(req.user.societyId, residentId, unitId);
+    return sendSuccess(res, 200, `Resident reactivated successfully and assigned to unit ${data.unit.displayLabel}.`, data);
+  } catch (error) {
+    if (error.status) {
+      return sendError(res, error.status, error.message);
+    }
+    next(error);
+  }
+};

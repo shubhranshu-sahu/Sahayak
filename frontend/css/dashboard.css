@@ -2178,3 +2178,103 @@ select.form-input:focus {
     }
 }
 
+/* ══════════ Society Setup Interactive Controls ══════════ */
+.unit-chip {
+    cursor: pointer;
+    transition: transform var(--dur-fast), box-shadow var(--dur-fast), border-color var(--dur-fast);
+}
+
+.unit-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.unit-chip.vacant:hover {
+    border-color: #2E7D32;
+    background: #DCEDC8;
+}
+
+.unit-chip.occupied:hover {
+    border-color: #7B1FA2;
+    background: #E1BEE7;
+}
+
+.btn-chip-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-full);
+    border: none;
+    background: transparent;
+    color: var(--clr-text-secondary);
+    cursor: pointer;
+    transition: all var(--dur-fast);
+    padding: 0;
+}
+
+.btn-chip-action:hover {
+    background: rgba(92, 26, 51, 0.12);
+    color: var(--clr-primary);
+}
+
+.btn-chip-action.text-danger:hover {
+    background: #FFEBEE;
+    color: #D32F2F;
+}
+
+.btn-icon-subtle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--clr-border);
+    background: var(--clr-surface);
+    color: var(--clr-text-secondary);
+    cursor: pointer;
+    transition: all var(--dur-fast);
+}
+
+.btn-icon-subtle:hover {
+    background: var(--clr-surface-dim);
+    color: var(--clr-primary);
+    border-color: var(--clr-primary);
+}
+
+.btn-icon-subtle.text-danger:hover {
+    background: #FFEBEE;
+    color: #D32F2F;
+    border-color: #EF9A9A;
+}
+
+.btn-floor-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--clr-text-muted);
+    cursor: pointer;
+    transition: all var(--dur-fast);
+}
+
+.btn-floor-delete:hover {
+    background: #FFEBEE;
+    color: #D32F2F;
+    border-color: #FFCDD2;
+}
+
+.validation-feedback {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--fs-xs);
+    font-weight: 500;
+}
+

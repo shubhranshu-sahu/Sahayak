@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Announcements & Digital Notice Board — Sahayak</title>
+    <meta name="description" content="Official society broadcasts, targeted resident notices, and digital notice board with read-receipt tracking.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/announcements.css">
+    <link rel="stylesheet" href="../css/cursor.css">
+</head>
+
+<body>
+    <!-- App Layout -->
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside id="app-sidebar"></aside>
+
+        <!-- Main Workspace -->
+        <main class="main-workspace">
+            <!-- Topbar -->
+            <header id="app-topbar"></header>
+
+            <!-- Page Body -->
+            <div class="content-body">
+                <!-- Skeleton Placeholder (Shown during initial data load) -->
+                <div id="announcements-skeleton" class="skeleton-screen-wrapper">
+                    <div class="skeleton skeleton-banner"></div>
+                    <div class="announcements-stats-grid">
+                        <div class="skeleton skeleton-stat"></div>
+                        <div class="skeleton skeleton-stat"></div>
+                        <div class="skeleton skeleton-stat"></div>
+                    </div>
+                    <div class="skeleton skeleton-panel" style="height: 380px;"></div>
+                </div>
+
+                <!-- ════════════════════════════════════════════════════════════ -->
+                <!-- 1. SECRETARY VIEW                                            -->
+                <!-- ════════════════════════════════════════════════════════════ -->
+                <div id="secretary-view" style="display: none;">
+                    <!-- Header -->
+                    <div class="announcements-header">
+                        <div class="announcements-header-left">
+                            <div class="header-badge" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--radius-full); background: rgba(92, 26, 51, 0.1); color: var(--clr-primary); font-size: var(--fs-xs); font-weight: var(--fw-semibold); margin-bottom: var(--sp-2);">
+                                <i data-lucide="megaphone"></i>
+                                <span>Official Broadcast Console</span>
+                            </div>
+                            <h2 class="announcements-title">Announcements Command Center</h2>
+                            <p class="announcements-subtitle">Broadcast official notices to all residents, targeted towers, specific floors, units, or roles with verifiable read tracking.</p>
+                        </div>
+                        <div class="announcements-header-actions">
+                            <button type="button" class="btn-clean-expired" id="btn-sec-clean-expired" title="Bulk soft-delete all expired announcements">
+                                <i data-lucide="trash-2"></i>
+                                <span>Clean Expired</span>
+                            </button>
+                            <button type="button" class="btn-create-announcement" id="btn-sec-new-announcement">
+                                <i data-lucide="plus-circle"></i>
+                                <span>Post Announcement</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 3 Metric Cards -->
+                    <div class="announcements-stats-grid">
+                        <div class="a-stat-card">
+                            <div class="a-stat-header">
+                                <span class="a-stat-label">Active Notices</span>
+                                <div class="a-stat-icon active"><i data-lucide="bell"></i></div>
+                            </div>
+                            <div class="a-stat-val" id="sec-stat-active">0</div>
+                            <div class="a-stat-footer">Live in resident notice feeds</div>
+                        </div>
+
+                        <div class="a-stat-card">
+                            <div class="a-stat-header">
+                                <span class="a-stat-label">Expired / Archived</span>
+                                <div class="a-stat-icon expired"><i data-lucide="archive"></i></div>
+                            </div>
+                            <div class="a-stat-val" id="sec-stat-expired">0</div>
+                            <div class="a-stat-footer">Past deadline · Retained for audit</div>
+                        </div>
+
+                        <div class="a-stat-card">
+                            <div class="a-stat-header">
+                                <span class="a-stat-label">Total Broadcasts</span>
+                                <div class="a-stat-icon total"><i data-lucide="radio"></i></div>
+                            </div>
+                            <div class="a-stat-val" id="sec-stat-total">0</div>
+                            <div class="a-stat-footer">All-time society notices posted</div>
+                        </div>
+                    </div>
+
+                    <!-- Filter Toolbar -->
+                    <div class="announcements-toolbar">
+                        <!-- Tabs -->
+                        <div class="announcements-tabs">
+                            <button type="button" class="a-tab-btn active" data-tab="active" id="sec-tab-active">
+                                <i data-lucide="radio"></i>
+                                <span>Active Notices</span>
+                                <span class="a-tab-badge" id="sec-badge-active">0</span>
+                            </button>
+                            <button type="button" class="a-tab-btn" data-tab="expired" id="sec-tab-expired">
+                                <i data-lucide="clock"></i>
+                                <span>Expired Archive</span>
+                                <span class="a-tab-badge" id="sec-badge-expired">0</span>
+                            </button>
+                            <button type="button" class="a-tab-btn" data-tab="all" id="sec-tab-all">
+                                <span>All History</span>
+                                <span class="a-tab-badge" id="sec-badge-all">0</span>
+                            </button>
+                        </div>
+
+                        <!-- Dropdowns -->
+                        <div class="announcements-filter-group">
+                            <select id="sec-filter-category" class="a-select-filter">
+                                <option value="">All Categories</option>
+                                <option value="general">General</option>
+                                <option value="maintenance">Maintenance</option>
+                                <option value="security">Security</option>
+                                <option value="event">Event</option>
+                                <option value="emergency">Emergency</option>
+                                <option value="financial">Financial</option>
+                            </select>
+
+                            <select id="sec-filter-priority" class="a-select-filter">
+                                <option value="">All Priorities</option>
+                                <option value="urgent">🔴 Urgent</option>
+                                <option value="normal">🔵 Normal</option>
+                                <option value="low">⚪ Low</option>
+                            </select>
+
+                            <select id="sec-filter-target" class="a-select-filter">
+                                <option value="">All Targets</option>
+                                <option value="all">Society-Wide</option>
+                                <option value="block">By Block</option>
+                                <option value="floor">By Floor</option>
+                                <option value="unit">By Unit</option>
+                                <option value="user">Specific Resident</option>
+                                <option value="role">By Role (Owner/Tenant)</option>
+                            </select>
+
+                            <button type="button" class="btn-card-action" id="btn-sec-refresh" title="Refresh list">
+                                <i data-lucide="rotate-cw" id="icon-refresh-sec"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Announcements Feed Container -->
+                    <div id="sec-announcements-list" class="announcements-list">
+                        <!-- Populated dynamically -->
+                    </div>
+
+                    <!-- Pagination -->
+                    <div id="sec-pagination" style="display: flex; justify-content: center; align-items: center; gap: var(--sp-3); margin-top: var(--sp-6);"></div>
+                </div>
+
+                <!-- ════════════════════════════════════════════════════════════ -->
+                <!-- 2. RESIDENT VIEW                                             -->
+                <!-- ════════════════════════════════════════════════════════════ -->
+                <div id="resident-view" style="display: none;">
+                    <!-- Header -->
+                    <div class="announcements-header">
+                        <div class="announcements-header-left">
+                            <div class="header-badge" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--radius-full); background: rgba(92, 26, 51, 0.1); color: var(--clr-primary); font-size: var(--fs-xs); font-weight: var(--fw-semibold); margin-bottom: var(--sp-2);">
+                                <i data-lucide="megaphone"></i>
+                                <span>Digital Notice Board</span>
+                            </div>
+                            <h2 class="announcements-title">Society Bulletins & Notices</h2>
+                            <p class="announcements-subtitle">Official announcements targeted to your flat, block, and residential community. Opening a notice automatically records your read receipt.</p>
+                        </div>
+                        <div class="announcements-header-actions">
+                            <button type="button" class="btn-card-action" id="btn-res-refresh" style="padding: var(--sp-2) var(--sp-4);">
+                                <i data-lucide="rotate-cw" id="icon-refresh-res"></i>
+                                <span>Refresh Notices</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Unread Alerts Banner -->
+                    <div id="res-unread-banner" style="display: none; background: linear-gradient(135deg, rgba(234, 88, 12, 0.1) 0%, rgba(220, 38, 38, 0.08) 100%); border: 1px solid rgba(234, 88, 12, 0.3); border-radius: var(--radius-lg); padding: var(--sp-4) var(--sp-5); margin-bottom: var(--sp-5); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);">
+                        <div style="display: flex; align-items: center; gap: var(--sp-3);">
+                            <div style="width: 36px; height: 36px; border-radius: var(--radius-full); background: rgba(234, 88, 12, 0.2); color: #EA580C; display: flex; align-items: center; justify-content: center; font-size: var(--fs-lg);">
+                                <i data-lucide="bell-ring"></i>
+                            </div>
+                            <div>
+                                <h4 style="font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--clr-text-primary); margin: 0;">Unread Community Notices</h4>
+                                <p style="font-size: var(--fs-xs); color: var(--clr-text-secondary); margin: 2px 0 0 0;" id="res-unread-text">You have 0 unread announcements.</p>
+                            </div>
+                        </div>
+                        <span class="badge-priority urgent" id="res-unread-badge-count">0 Unread</span>
+                    </div>
+
+                    <!-- Filter Toolbar -->
+                    <div class="announcements-toolbar">
+                        <div class="announcements-tabs">
+                            <button type="button" class="a-tab-btn active" data-tab="active" id="res-tab-active">
+                                <i data-lucide="radio"></i>
+                                <span>Active Notices</span>
+                            </button>
+                            <button type="button" class="a-tab-btn" data-tab="archived" id="res-tab-archived">
+                                <i data-lucide="archive"></i>
+                                <span>Archived Notices</span>
+                            </button>
+                        </div>
+
+                        <div class="announcements-filter-group">
+                            <select id="res-filter-category" class="a-select-filter">
+                                <option value="">All Categories</option>
+                                <option value="general">General</option>
+                                <option value="maintenance">Maintenance</option>
+                                <option value="security">Security</option>
+                                <option value="event">Event</option>
+                                <option value="emergency">Emergency</option>
+                                <option value="financial">Financial</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Resident Announcements Feed -->
+                    <div id="res-announcements-list" class="announcements-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- MODAL 1: CREATE ANNOUNCEMENT (Secretary Only)                 -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <div id="modal-create-announcement" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i data-lucide="megaphone" style="color: var(--clr-primary);"></i>
+                    <span>Broadcast New Announcement</span>
+                </h3>
+                <button type="button" class="btn-close-modal" id="btn-close-create-modal">&times;</button>
+            </div>
+            <form id="form-create-announcement">
+                <div class="modal-body">
+                    <!-- Title -->
+                    <div class="form-group">
+                        <label class="form-label" for="ann-input-title">Announcement Headline *</label>
+                        <input type="text" id="ann-input-title" class="form-input" placeholder="e.g. Water Supply Interruption on Sunday (Block B)" required minlength="5" maxlength="200">
+                        <div class="form-help">Concise subject line (5 - 200 characters).</div>
+                    </div>
+
+                    <!-- Category & Priority -->
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label class="form-label" for="ann-select-category">Category *</label>
+                            <select id="ann-select-category" class="form-select" required>
+                                <option value="general">General Notice</option>
+                                <option value="maintenance">Maintenance & Repairs</option>
+                                <option value="security">Security & Access</option>
+                                <option value="event">Community Event / AGM</option>
+                                <option value="emergency">Emergency Alert</option>
+                                <option value="financial">Financial / Dues Notice</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="ann-select-priority">Priority *</label>
+                            <select id="ann-select-priority" class="form-select" required>
+                                <option value="normal" selected>Normal (Standard Feed)</option>
+                                <option value="urgent">Urgent (Pinned Alert + Alert Stripe)</option>
+                                <option value="low">Low (Routine Notice)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Target Audience -->
+                    <div class="form-group">
+                        <label class="form-label">Target Audience Scope *</label>
+                        <select id="ann-select-target-type" class="form-select" required>
+                            <option value="all" selected>All Society Residents (Society-Wide)</option>
+                            <option value="block">Specific Block / Tower</option>
+                            <option value="floor">Specific Floor (Inside a Block)</option>
+                            <option value="unit">Specific Unit / Flat</option>
+                            <option value="user">Specific Individual Resident (Direct)</option>
+                            <option value="role">Specific Resident Role (Owners or Tenants)</option>
+                        </select>
+                    </div>
+
+                    <!-- Dynamic Target Details Container -->
+                    <div id="target-details-container" style="display: none; background: var(--clr-surface-alt); border: 1px solid var(--clr-border); border-radius: var(--radius-md); padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-4);">
+                        <!-- Block Picker -->
+                        <div id="target-block-picker" style="display: none;">
+                            <label class="form-label" for="ann-target-block">Select Block *</label>
+                            <select id="ann-target-block" class="form-select">
+                                <option value="">-- Choose Block --</option>
+                            </select>
+                        </div>
+
+                        <!-- Floor Picker -->
+                        <div id="target-floor-picker" style="display: none;">
+                            <div class="form-row-2">
+                                <div>
+                                    <label class="form-label" for="ann-target-floor-block">Select Block</label>
+                                    <select id="ann-target-floor-block" class="form-select">
+                                        <option value="">-- Choose Block --</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label" for="ann-target-floor">Select Floor *</label>
+                                    <select id="ann-target-floor" class="form-select">
+                                        <option value="">-- Choose Floor --</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Unit Picker -->
+                        <div id="target-unit-picker" style="display: none;">
+                            <label class="form-label" for="ann-target-unit">Select Flat / Unit *</label>
+                            <select id="ann-target-unit" class="form-select">
+                                <option value="">-- Choose Unit --</option>
+                            </select>
+                        </div>
+
+                        <!-- Resident Picker -->
+                        <div id="target-user-picker" style="display: none;">
+                            <label class="form-label" for="ann-target-user">Select Resident *</label>
+                            <select id="ann-target-user" class="form-select">
+                                <option value="">-- Choose Active Resident --</option>
+                            </select>
+                        </div>
+
+                        <!-- Role Picker -->
+                        <div id="target-role-picker" style="display: none;">
+                            <label class="form-label" for="ann-target-role">Select Occupant Role *</label>
+                            <select id="ann-target-role" class="form-select">
+                                <option value="owner">All Flat Owners</option>
+                                <option value="tenant">All Registered Tenants</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Expiry Date & Presets -->
+                    <div class="form-group">
+                        <label class="form-label" for="ann-input-expires">Expiry Datetime *</label>
+                        <input type="datetime-local" id="ann-input-expires" class="form-input" required>
+                        <div class="preset-chips">
+                            <span class="preset-chip" data-hours="24">+24 Hours</span>
+                            <span class="preset-chip" data-hours="72">+3 Days</span>
+                            <span class="preset-chip" data-hours="168">+1 Week</span>
+                            <span class="preset-chip" data-hours="720">+1 Month</span>
+                        </div>
+                        <div class="form-help">After this datetime, notice will archive automatically and move off the active feed.</div>
+                    </div>
+
+                    <!-- Announcement Body -->
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="ann-textarea-content">Detailed Notice Body *</label>
+                        <textarea id="ann-textarea-content" class="form-textarea" placeholder="Enter the full official text of this announcement. Include timelines, instructions, or vendor contacts." required minlength="10" maxlength="5000"></textarea>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                            <span class="form-help">10 - 5000 characters. Announcements are immutable once posted.</span>
+                            <span id="char-counter" style="font-size: var(--fs-xs); color: var(--clr-text-muted);">0 / 5000</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-card-action" id="btn-cancel-create">Cancel</button>
+                    <button type="submit" class="btn-create-announcement" id="btn-submit-announcement">
+                        <i data-lucide="send"></i>
+                        <span>Publish Announcement</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- MODAL 2: ANNOUNCEMENT DETAILS & READ ROSTER                  -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <div id="modal-announcement-details" class="modal-overlay">
+        <div class="modal-card" style="max-width: 720px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: var(--sp-2);">
+                    <span id="detail-badge-priority" class="badge-priority normal">Normal</span>
+                    <span id="detail-badge-category" class="badge-category">General</span>
+                </div>
+                <button type="button" class="btn-close-modal" id="btn-close-detail-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h3 id="detail-title" class="announcement-title-text" style="font-size: var(--fs-xl); margin-bottom: var(--sp-2);">Announcement Title</h3>
+                
+                <div style="display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-xs); color: var(--clr-text-muted); margin-bottom: var(--sp-4); flex-wrap: wrap;">
+                    <span id="detail-target" class="badge-target"><i data-lucide="users"></i> All Residents</span>
+                    <span id="detail-created-at">Posted on --</span>
+                    <span>·</span>
+                    <span id="detail-expires-at">Expires on --</span>
+                </div>
+
+                <!-- Full Body -->
+                <div id="detail-content" style="background: var(--clr-surface-alt); border: 1px solid var(--clr-border); border-radius: var(--radius-md); padding: var(--sp-4); font-size: var(--fs-sm); line-height: 1.6; color: var(--clr-text-primary); white-space: pre-line; margin-bottom: var(--sp-5);"></div>
+
+                <!-- Secretary Only: Read Stats & Readers Roster -->
+                <div id="detail-sec-stats-section" style="display: none;">
+                    <h4 style="font-family: var(--ff-heading); font-size: var(--fs-base); font-weight: var(--fw-bold); color: var(--clr-text-primary); margin-bottom: var(--sp-3); display: flex; align-items: center; justify-content: space-between;">
+                        <span>Verifiable Read Receipts Roster</span>
+                        <span id="detail-read-badge-ratio" style="font-size: var(--fs-xs); font-weight: var(--fw-bold); color: #059669;">0 / 0 Read (0%)</span>
+                    </h4>
+
+                    <div class="stats-progress-track" style="height: 8px; margin-bottom: var(--sp-4);">
+                        <div id="detail-progress-fill" class="stats-progress-fill" style="width: 0%;"></div>
+                    </div>
+
+                    <div class="readers-table-wrap">
+                        <table class="readers-table">
+                            <thead>
+                                <tr>
+                                    <th>Resident Name</th>
+                                    <th>Unit / Flat</th>
+                                    <th>Read Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detail-readers-tbody">
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: var(--clr-text-muted);">No read receipts recorded yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-card-action" id="btn-close-detail-bottom">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <!-- MODAL 3: DELETE CONFIRMATION                                 -->
+    <!-- ════════════════════════════════════════════════════════════ -->
+    <div id="modal-delete-confirm" class="modal-overlay">
+        <div class="modal-card" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3 class="modal-title" style="color: #DC2626;">
+                    <i data-lucide="alert-triangle"></i>
+                    <span id="delete-modal-title">Delete Announcement?</span>
+                </h3>
+                <button type="button" class="btn-close-modal" id="btn-close-delete-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="delete-modal-text" style="font-size: var(--fs-sm); color: var(--clr-text-secondary); line-height: 1.5;">Are you sure you want to delete this announcement? This action will soft-delete the notice and remove it from all resident feeds.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-card-action" id="btn-cancel-delete">Cancel</button>
+                <button type="button" class="btn-card-action danger" id="btn-confirm-delete" style="background: rgba(220, 38, 38, 0.1); color: #DC2626; border-color: rgba(220, 38, 38, 0.3);">
+                    <i data-lucide="trash-2"></i>
+                    <span id="delete-btn-label">Delete</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="../config.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/router.js"></script>
+    <script src="../js/components.js"></script>
+    <script src="../js/cursor.js"></script>
+    <script src="../js/pages/announcements.js"></script>
+</body>
+
+</html>

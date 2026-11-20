@@ -21,7 +21,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 4. Setup Event Listeners
     setupEventListeners(user);
 
-    // 5. Hide Skeleton and Reveal Content
+    // 5. Load Real Complaints & Announcements Count
+    loadResidentComplaintsCount();
+    loadResidentAnnouncementsCount();
+
+    // 6. Hide Skeleton and Reveal Content
     const skeleton = document.getElementById('resident-skeleton');
     const mainView = document.getElementById('resident-main-view');
     if (skeleton && mainView) {
@@ -138,12 +142,47 @@ function setupEventListeners(user) {
             }
         });
     }
+}
 
-    // Phase 2 Complaint Button
-    const btnLodge = document.getElementById('btn-lodge-complaint');
-    if (btnLodge) {
-        btnLodge.addEventListener('click', () => {
-            Toast.info('Complaint Lodging & Ticketing module is scheduled for Phase 2 development!');
-        });
+async function loadResidentComplaintsCount() {
+    try {
+        const res = await Api.getMyComplaints({ limit: 1 });
+        if (res.success && res.data) {
+            const total = res.data.pagination ? res.data.pagination.total : 0;
+            const cardTicketsCount = document.getElementById('card-tickets-count');
+            const cardTicketsBadge = document.getElementById('card-tickets-badge');
+            const cardTicketsSub = document.getElementById('card-tickets-sub');
+
+            if (cardTicketsCount) cardTicketsCount.textContent = `${total} ${total === 1 ? 'Ticket' : 'Tickets'}`;
+            if (cardTicketsBadge) {
+                cardTicketsBadge.textContent = total > 0 ? 'Active' : 'All Clear';
+                cardTicketsBadge.className = `stat-badge ${total > 0 ? 'amber' : 'positive'}`;
+            }
+            if (cardTicketsSub) cardTicketsSub.textContent = total > 0 ? 'Tap to view' : 'No issues reported';
+        }
+    } catch (err) {
+        console.warn('Failed to load resident complaints count:', err);
+    }
+}
+
+async function loadResidentAnnouncementsCount() {
+    try {
+        const res = await Api.getMyAnnouncements({ limit: 1 });
+        if (res.success && res.data) {
+            const unread = res.data.unread_count || 0;
+            const activeCount = Array.isArray(res.data.active) ? res.data.active.length : 0;
+            const cardCount = document.getElementById('card-notices-count');
+            const cardBadge = document.getElementById('card-notices-badge');
+            const cardSub = document.getElementById('card-notices-sub');
+
+            if (cardCount) cardCount.textContent = unread > 0 ? `${unread} Unread` : `${activeCount} Active`;
+            if (cardBadge) {
+                cardBadge.textContent = unread > 0 ? 'New Alerts' : 'Up to Date';
+                cardBadge.className = `stat-badge ${unread > 0 ? 'amber' : 'positive'}`;
+            }
+            if (cardSub) cardSub.textContent = unread > 0 ? 'Tap to open board' : 'No new notices';
+        }
+    } catch (err) {
+        console.warn('Failed to load resident announcements count:', err);
     }
 }

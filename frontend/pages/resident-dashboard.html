@@ -105,32 +105,32 @@
                         </div>
 
                         <!-- Maintenance & Helpdesk -->
-                        <div class="stat-card">
+                        <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='complaints.html'" title="View My Complaints">
                             <div class="stat-card-header">
                                 <span class="stat-card-title">Helpdesk Tickets</span>
                                 <div class="stat-icon warning">
                                     <i data-lucide="clipboard-list"></i>
                                 </div>
                             </div>
-                            <div class="stat-card-value">0 Open</div>
+                            <div class="stat-card-value" id="card-tickets-count">-- Open</div>
                             <div class="stat-card-footer">
-                                <span class="stat-badge amber">All Clear</span>
-                                <span>No active issues</span>
+                                <span class="stat-badge amber" id="card-tickets-badge">Active</span>
+                                <span id="card-tickets-sub">Tap to view</span>
                             </div>
                         </div>
 
-                        <!-- AI Concierge -->
-                        <div class="stat-card">
+                        <!-- Digital Notice Board -->
+                        <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='announcements.html'" title="View Society Notice Board">
                             <div class="stat-card-header">
-                                <span class="stat-card-title">Sahayak AI</span>
+                                <span class="stat-card-title">Notice Board</span>
                                 <div class="stat-icon accent">
-                                    <i data-lucide="cpu"></i>
+                                    <i data-lucide="megaphone"></i>
                                 </div>
                             </div>
-                            <div class="stat-card-value">Online</div>
+                            <div class="stat-card-value" id="card-notices-count">--</div>
                             <div class="stat-card-footer">
-                                <span class="stat-badge positive">Ready</span>
-                                <span>Answers in seconds</span>
+                                <span class="stat-badge positive" id="card-notices-badge">Bulletins</span>
+                                <span id="card-notices-sub">Tap to view</span>
                             </div>
                         </div>
                     </div>
@@ -265,10 +265,10 @@
                                     <p style="font-size: var(--fs-xs); color: var(--clr-text-secondary); margin-bottom: var(--sp-4);">
                                         Have an issue with electricals, plumbing, cleanliness, or parking in your block? You can draft concerns directly to the RWA committee:
                                     </p>
-                                    <button type="button" class="btn-banner-primary" id="btn-lodge-complaint" style="width: 100%; justify-content: center;">
+                                    <a href="complaints.html#raise" class="btn-banner-primary" id="btn-lodge-complaint" style="width: 100%; justify-content: center; text-decoration: none;">
                                         <i data-lucide="plus-circle"></i>
                                         <span>Raise a Maintenance Request</span>
-                                    </button>
+                                    </a>
                                 </div>
                             </div>
                         </div>

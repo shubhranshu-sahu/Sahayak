@@ -35,7 +35,30 @@ async def send_chat_message(
     request.secretary_id = verified_secretary_id
     request.thread_id = f"secretary_{verified_secretary_id}"
 
-    logger.info("Authenticated secretary ID: %d sending message.", verified_secretary_id)
+    # Security: bind verified society_id from token claims
+    token_society_id = current_user.get("society_id")
+    if token_society_id is not None:
+        try:
+            request.society_id = int(token_society_id)
+        except (ValueError, TypeError):
+            pass
+
+    # Populate optional contextual defaults from JWT payload if available
+    raw_payload = current_user.get("raw_payload", {})
+    if not request.secretary_name or request.secretary_name == "Secretary":
+        name = raw_payload.get("name") or raw_payload.get("userName")
+        if name:
+            request.secretary_name = name
+    if not request.society_name or request.society_name == "the Society":
+        soc_name = raw_payload.get("societyName")
+        if soc_name:
+            request.society_name = soc_name
+
+    logger.info(
+        "Authenticated secretary ID: %d (society_id: %s) sending message.",
+        verified_secretary_id,
+        request.society_id,
+    )
 
     return StreamingResponse(
         chat_service.stream_chat(request),
