@@ -21,8 +21,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 4. Setup Event Listeners
     setupEventListeners(user);
 
-    // 5. Load Real Complaints Count
+    // 5. Load Real Complaints & Announcements Count
     loadResidentComplaintsCount();
+    loadResidentAnnouncementsCount();
 
     // 6. Hide Skeleton and Reveal Content
     const skeleton = document.getElementById('resident-skeleton');
@@ -161,5 +162,27 @@ async function loadResidentComplaintsCount() {
         }
     } catch (err) {
         console.warn('Failed to load resident complaints count:', err);
+    }
+}
+
+async function loadResidentAnnouncementsCount() {
+    try {
+        const res = await Api.getMyAnnouncements({ limit: 1 });
+        if (res.success && res.data) {
+            const unread = res.data.unread_count || 0;
+            const activeCount = Array.isArray(res.data.active) ? res.data.active.length : 0;
+            const cardCount = document.getElementById('card-notices-count');
+            const cardBadge = document.getElementById('card-notices-badge');
+            const cardSub = document.getElementById('card-notices-sub');
+
+            if (cardCount) cardCount.textContent = unread > 0 ? `${unread} Unread` : `${activeCount} Active`;
+            if (cardBadge) {
+                cardBadge.textContent = unread > 0 ? 'New Alerts' : 'Up to Date';
+                cardBadge.className = `stat-badge ${unread > 0 ? 'amber' : 'positive'}`;
+            }
+            if (cardSub) cardSub.textContent = unread > 0 ? 'Tap to open board' : 'No new notices';
+        }
+    } catch (err) {
+        console.warn('Failed to load resident announcements count:', err);
     }
 }

@@ -64,6 +64,13 @@ const Components = (() => {
                                 </a>
                             </li>
                             <li>
+                                <a href="announcements.html" class="nav-link ${activePage === 'announcements' ? 'active' : ''}">
+                                    <i data-lucide="megaphone"></i>
+                                    <span>Notice Board</span>
+                                    <span class="nav-badge nav-badge-pending" id="sidebar-notices-badge" style="display: none;">0</span>
+                                </a>
+                            </li>
+                            <li>
                                 <a href="complaints.html" class="nav-link ${activePage === 'complaints' ? 'active' : ''}">
                                     <i data-lucide="clipboard-list"></i>
                                     <span>Complaints</span>
@@ -108,6 +115,12 @@ const Components = (() => {
                     <div>
                         <div class="nav-group-title">Management</div>
                         <ul class="nav-list">
+                            <li>
+                                <a href="announcements.html" class="nav-link ${activePage === 'announcements' ? 'active' : ''}">
+                                    <i data-lucide="megaphone"></i>
+                                    <span>Announcements</span>
+                                </a>
+                            </li>
                             <li>
                                 <a href="residents.html" class="nav-link ${activePage === 'residents' ? 'active' : ''}">
                                     <i data-lucide="users"></i>
